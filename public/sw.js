@@ -1,10 +1,11 @@
-const CACHE_VERSION = 'kalos-pokedex-v1.1'; // Increment to update PWA
+const CACHE_VERSION = 'kalos-pokedex-v1.2'; // Incremented version
 const PRECACHE_NAME = `kalos-precache-${CACHE_VERSION}`;
 const RUNTIME_CACHE_NAME = `kalos-runtime-${CACHE_VERSION}`;
 
 // Assets to be pre-cached
+// Paths for manifest and icons are updated. Other paths are relative to the root.
 const PRECACHE_ASSETS = [
-  '/', // Alias for index.html
+  '/', 
   '/index.html',
   '/index.tsx',
   '/App.tsx',
@@ -20,15 +21,13 @@ const PRECACHE_ASSETS = [
   '/components/GymLeaderCard.tsx',
   'https://cdn.tailwindcss.com',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-  // React via esm.sh as per importmap
   'https://esm.sh/react@^19.1.0',
-  'https://esm.sh/react-dom@^19.1.0/client', // More specific to your import
-  '/manifest.webmanifest',
-  '/icon-192x192.png',
-  '/icon-512x512.png',
-  // Key static images used in the app
-  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png', // Header
-  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/201-question.png' // Error image
+  'https://esm.sh/react-dom@^19.1.0/client',
+  '/public/manifest.json', // Updated path
+  '/public/icons/icon-192x192.png', // Updated path
+  '/public/icons/icon-512x512.png', // Updated path
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png',
+  'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/201-question.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -36,13 +35,12 @@ self.addEventListener('install', (event) => {
     caches.open(PRECACHE_NAME)
       .then(cache => {
         console.log('[Service Worker] Pre-caching app shell:', PRECACHE_ASSETS);
-        return Promise.all(
-          PRECACHE_ASSETS.map(url => {
-            return cache.add(url).catch(error => {
-              console.error(`[Service Worker] Failed to cache ${url}:`, error);
-            });
-          })
-        );
+        const cachePromises = PRECACHE_ASSETS.map(url => {
+          return cache.add(url).catch(error => { // Added return here
+            console.error(`[Service Worker] Failed to cache ${url}:`, error);
+          });
+        });
+        return Promise.all(cachePromises);
       })
       .then(() => {
         console.log('[Service Worker] App shell pre-cached successfully.');
@@ -74,56 +72,57 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  const requestUrl = new URL(request.url);
 
   // Strategy 1: Network first, then Cache for navigation requests (HTML)
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then(response => {
-          // If successful, clone and cache for offline (index.html)
-          if (response.ok && request.url.endsWith('/')) { // Only cache root/index.html
+          if (response.ok && request.url.endsWith('/index.html') || request.url === self.registration.scope ) {
              const cacheResponse = response.clone();
              caches.open(PRECACHE_NAME).then(cache => cache.put(request, cacheResponse));
           }
           return response;
         })
         .catch(() => {
-          // If network fails, try to serve from precache
-          return caches.match(PRECACHE_ASSETS.includes('/') ? '/' : '/index.html', { cacheName: PRECACHE_NAME });
+           return caches.match(request, { cacheName: PRECACHE_NAME })
+            .then(cachedResponse => {
+                // If the direct match fails (e.g. /some/path not cached directly), fall back to /index.html
+                return cachedResponse || caches.match('/index.html', { cacheName: PRECACHE_NAME });
+            });
         })
     );
     return;
   }
 
   // Strategy 2: Cache first for pre-cached app shell assets
-  const requestUrl = new URL(request.url);
-  // Normalize paths for comparison (remove leading slashes for local assets)
   const normalizedPath = requestUrl.origin === self.origin ? requestUrl.pathname : request.url;
-
   if (PRECACHE_ASSETS.includes(normalizedPath)) {
     event.respondWith(
       caches.match(request, { cacheName: PRECACHE_NAME })
         .then(cachedResponse => {
           return cachedResponse || fetch(request).then(networkResponse => {
-            // Optionally update cache if fetched from network, though for precache it should exist
             if (networkResponse.ok) {
               const resClone = networkResponse.clone();
               caches.open(PRECACHE_NAME).then(cache => cache.put(request, resClone));
             }
             return networkResponse;
+          }).catch(err => {
+            console.error('[Service Worker] Network fetch failed for precached asset:', request.url, err);
+            // Optional: return a generic fallback if even network fails for a precached asset
           });
         })
     );
     return;
   }
   
-  // Strategy 3: Cache first, then Network for runtime assets (API, images, dynamic fonts)
-  // Particularly for PokeAPI, GitHub sprites, Bulbagarden images, and Google font files (.woff2)
+  // Strategy 3: Cache first, then Network for runtime assets
   if (
     request.url.startsWith('https://pokeapi.co/api/v2/') ||
     request.url.startsWith('https://raw.githubusercontent.com/PokeAPI/sprites/') ||
     request.url.startsWith('https://archives.bulbagarden.net/media/upload/') ||
-    request.url.startsWith('https://fonts.gstatic.com/s/inter/') // Google font files
+    request.url.startsWith('https://fonts.gstatic.com/s/inter/')
   ) {
     event.respondWith(
       caches.match(request, { cacheName: RUNTIME_CACHE_NAME })
@@ -144,13 +143,15 @@ self.addEventListener('fetch', (event) => {
             })
             .catch(error => {
               console.error('[Service Worker] Fetch failed for runtime asset:', request.url, error);
-              // Optionally return a fallback image/data here if needed
             });
         })
     );
     return;
   }
 
-  // Default: just fetch from network for any other requests
-  event.respondWith(fetch(request));
+  // Default: just fetch from network
+  event.respondWith(fetch(request).catch(err => {
+    console.error('[Service Worker] General fetch failed:', request.url, err);
+    // No generic fallback here, browser will show its default offline page for unhandled requests
+  }));
 });
