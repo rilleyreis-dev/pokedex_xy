@@ -1,7 +1,18 @@
 
-import React from 'react';
-import { PokemonDetail, PokemonStat, PokemonType, MAX_STAT_VALUE, PokemonAbility as PokemonAbilityInterface, BasePokemon } from '../types';
-import { POKEMON_TYPE_COLORS, POKEMON_STAT_COLORS, OFFICIAL_ARTWORK_URL, SPRITE_URL, capitalize, formatId, INITIAL_POKEMON_LIST } from '../constants';
+import React, { useState, useEffect, useCallback } from 'react';
+import { 
+    PokemonDetail, PokemonStat, PokemonType, MAX_STAT_VALUE, 
+    PokemonAbility as PokemonAbilityInterface, 
+    BasePokemon,
+    PokemonSpecies, EvolutionChainResponse, EvolutionChainLink, ProcessedEvolutionDisplayInfo, EvolutionStageInfo, EvolutionStep,
+    EvolutionDetailFromApi // Added import
+} from '../types';
+import { 
+    POKEMON_TYPE_COLORS, POKEMON_STAT_COLORS, OFFICIAL_ARTWORK_URL, SPRITE_URL, 
+    capitalize, formatId, INITIAL_POKEMON_LIST, extractIdFromUrl, formatEvolutionTrigger
+} from '../constants';
+import { getPokemonSpeciesByUrl, getEvolutionChainByUrl } from '../services/pokemonService';
+import LoadingSpinner from './LoadingSpinner';
 
 interface PokemonModalProps {
   pokemon: PokemonDetail | null;
@@ -22,7 +33,7 @@ const StatDisplay: React.FC<{ stat: PokemonStat }> = ({ stat }) => {
         <div
           data-testid={`stat-bar-${stat.stat.name}`}
           className={`h-full rounded-full ${statColor} transition-all duration-500 ease-out`}
-          style={{ width: `${percentage}%` }} // Inline style for dynamic width
+          style={{ width: `${percentage}%` }}
         ></div>
       </div>
     </div>
@@ -31,21 +42,165 @@ const StatDisplay: React.FC<{ stat: PokemonStat }> = ({ stat }) => {
 
 
 const PokemonModal: React.FC<PokemonModalProps> = ({ pokemon, onClose }) => {
-  if (!pokemon) return null;
-
-  const [imageSrc, setImageSrc] = React.useState<string>(pokemon.sprites.other?.['official-artwork']?.front_default || pokemon.sprites.front_default || OFFICIAL_ARTWORK_URL(pokemon.id));
+  const [imageSrc, setImageSrc] = useState<string>('');
   
-  // Find the base Pokemon from INITIAL_POKEMON_LIST to get its routes
+  const [pokemonSpecies, setPokemonSpecies] = useState<PokemonSpecies | null>(null);
+  const [evolutionChainResponse, setEvolutionChainResponse] = useState<EvolutionChainResponse | null>(null);
+  const [processedEvolutions, setProcessedEvolutions] = useState<ProcessedEvolutionDisplayInfo | null>(null);
+  const [isEvolutionDataLoading, setIsEvolutionDataLoading] = useState<boolean>(false);
+  const [evolutionDataError, setEvolutionDataError] = useState<string | null>(null);
+
+
+  useEffect(() => {
+    if (pokemon) {
+      setImageSrc(pokemon.sprites.other?.['official-artwork']?.front_default || pokemon.sprites.front_default || OFFICIAL_ARTWORK_URL(pokemon.id));
+      
+      const fetchEvolutionData = async () => {
+        if (!pokemon.species || !pokemon.species.url) {
+            setEvolutionDataError("Species data URL missing.");
+            return;
+        }
+        setIsEvolutionDataLoading(true);
+        setEvolutionDataError(null);
+        setPokemonSpecies(null);
+        setEvolutionChainResponse(null);
+        setProcessedEvolutions(null);
+
+        try {
+          const speciesData = await getPokemonSpeciesByUrl(pokemon.species.url);
+          setPokemonSpecies(speciesData);
+
+          if (speciesData.evolution_chain && speciesData.evolution_chain.url) {
+            const chainData = await getEvolutionChainByUrl(speciesData.evolution_chain.url);
+            setEvolutionChainResponse(chainData);
+            setProcessedEvolutions(processEvolutionChainForDisplay(chainData.chain, pokemon.name));
+          } else {
+            setEvolutionDataError("Evolution chain URL missing.");
+          }
+        } catch (error) {
+          console.error("Failed to load evolution data:", error);
+          setEvolutionDataError("Failed to load evolution data.");
+        } finally {
+          setIsEvolutionDataLoading(false);
+        }
+      };
+
+      fetchEvolutionData();
+    }
+  }, [pokemon]);
+
+
+  const processEvolutionChainForDisplay = useCallback((
+    chainLink: EvolutionChainLink, 
+    currentPokemonName: string
+  ): ProcessedEvolutionDisplayInfo | null => {
+    
+    let currentStageInfo: EvolutionStageInfo | null = null;
+    let evolvesFromStep: EvolutionStep | undefined = undefined;
+    const evolvesToSteps: EvolutionStep[] = [];
+
+    function findPath(currentLink: EvolutionChainLink, path: { link: EvolutionChainLink, details: EvolutionDetailFromApi[] }[] = []): void {
+        const speciesId = extractIdFromUrl(currentLink.species.url);
+        if (!speciesId) return;
+
+        const stageInfo: EvolutionStageInfo = {
+            name: capitalize(currentLink.species.name),
+            id: speciesId,
+            imageUrl: SPRITE_URL(speciesId),
+        };
+
+        if (currentLink.species.name === currentPokemonName) {
+            currentStageInfo = stageInfo;
+            // Check previous stage in path
+            if (path.length > 0) {
+                const prevPathLink = path[path.length - 1];
+                const prevSpeciesId = extractIdFromUrl(prevPathLink.link.species.url);
+                if (prevSpeciesId) {
+                    evolvesFromStep = {
+                        from: { name: capitalize(prevPathLink.link.species.name), id: prevSpeciesId, imageUrl: SPRITE_URL(prevSpeciesId) },
+                        to: stageInfo,
+                        method: formatEvolutionTrigger(prevPathLink.details),
+                    };
+                }
+            }
+            // Check next stages
+            currentLink.evolves_to.forEach(nextLink => {
+                const nextSpeciesId = extractIdFromUrl(nextLink.species.url);
+                if (nextSpeciesId) {
+                    evolvesToSteps.push({
+                        from: stageInfo,
+                        to: { name: capitalize(nextLink.species.name), id: nextSpeciesId, imageUrl: SPRITE_URL(nextSpeciesId) },
+                        method: formatEvolutionTrigger(nextLink.evolution_details),
+                    });
+                }
+            });
+            return; // Found current Pokemon, stop this branch of recursion for path finding
+        }
+
+        // Continue searching
+        currentLink.evolves_to.forEach(nextLink => {
+            findPath(nextLink, [...path, {link: currentLink, details: nextLink.evolution_details}]);
+        });
+    }
+    
+    // To handle the very first stage if currentPokemon is the base form
+     const firstStageId = extractIdFromUrl(chainLink.species.url);
+     if (firstStageId && chainLink.species.name === currentPokemonName) {
+        currentStageInfo = {
+            name: capitalize(chainLink.species.name),
+            id: firstStageId,
+            imageUrl: SPRITE_URL(firstStageId),
+        };
+        chainLink.evolves_to.forEach(nextLink => {
+            const nextSpeciesId = extractIdFromUrl(nextLink.species.url);
+            if (nextSpeciesId && currentStageInfo) { // currentStageInfo must be defined
+                 evolvesToSteps.push({
+                    from: currentStageInfo,
+                    to: { name: capitalize(nextLink.species.name), id: nextSpeciesId, imageUrl: SPRITE_URL(nextSpeciesId) },
+                    method: formatEvolutionTrigger(nextLink.evolution_details),
+                });
+            }
+        });
+     } else {
+        findPath(chainLink);
+     }
+
+
+    if (!currentStageInfo) return null; // Should not happen if currentPokemonName is valid
+
+    return {
+        evolvesFrom: evolvesFromStep,
+        currentStage: currentStageInfo,
+        evolvesTo: evolvesToSteps,
+    };
+
+  }, []);
+
+
+  if (!pokemon) return null;
+  
   const basePokemonData = INITIAL_POKEMON_LIST.find(p => p.id === pokemon.id);
   const pokemonRoutes = basePokemonData?.routes || [];
 
   const handleImageError = () => {
-    setImageSrc(pokemon.sprites.front_default || SPRITE_URL(pokemon.id));
+    if (pokemon?.sprites?.front_default) {
+        setImageSrc(pokemon.sprites.front_default);
+    } else if (pokemon?.id) {
+        setImageSrc(SPRITE_URL(pokemon.id));
+    }
   };
 
   const getTypeColors = (typeName: string) => {
     return POKEMON_TYPE_COLORS[typeName.toLowerCase()] || { background: 'bg-gray-300', text: 'text-black' };
   };
+
+  const renderEvolutionStage = (stage: EvolutionStageInfo, method?: string, direction?: 'from' | 'to') => (
+    <div className={`flex flex-col items-center text-center p-2 rounded-lg bg-slate-700/50 shadow-inner ${direction === 'from' || direction === 'to' ? 'w-28 sm:w-32' : ''}`}>
+      <img src={stage.imageUrl} alt={stage.name} className="w-16 h-16 sm:w-20 sm:h-20 object-contain mb-1" />
+      <p className="text-xs sm:text-sm font-semibold text-slate-200">{stage.name}</p>
+      {method && <p className="text-[0.65rem] sm:text-xs text-sky-400 mt-0.5 px-1 text-center">{method}</p>}
+    </div>
+  );
 
   return (
     <div 
@@ -106,7 +261,7 @@ const PokemonModal: React.FC<PokemonModalProps> = ({ pokemon, onClose }) => {
             </div>
           </div>
 
-          {/* Right Column: Abilities, Stats, and Routes */}
+          {/* Right Column: Abilities, Stats, Routes, and Evolutions */}
           <div className="md:w-2/3">
             <div>
               <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-sky-400 mb-2 sm:mb-3 border-b-2 border-slate-700 pb-1">Abilities</h3>
@@ -132,7 +287,7 @@ const PokemonModal: React.FC<PokemonModalProps> = ({ pokemon, onClose }) => {
             </div>
             
             {pokemonRoutes.length > 0 && (
-              <div>
+              <div className="mb-4 sm:mb-6">
                 <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-sky-400 mb-2 sm:mb-3 border-b-2 border-slate-700 pb-1">Found on Routes</h3>
                 <ul className="flex flex-wrap gap-2 text-slate-300">
                   {pokemonRoutes.map((route: string) => (
@@ -144,6 +299,47 @@ const PokemonModal: React.FC<PokemonModalProps> = ({ pokemon, onClose }) => {
               </div>
             )}
 
+            {/* Evolutions Section */}
+            <div>
+              <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-sky-400 mb-2 sm:mb-3 border-b-2 border-slate-700 pb-1">Evolutions</h3>
+              {isEvolutionDataLoading && <div className="flex justify-center py-4"><LoadingSpinner size="md"/></div>}
+              {evolutionDataError && <p className="text-red-400 text-sm">{evolutionDataError}</p>}
+              {processedEvolutions && !isEvolutionDataLoading && !evolutionDataError && (
+                 <div className="flex flex-col items-center space-y-3 sm:space-y-4">
+                  {processedEvolutions.evolvesFrom && (
+                    <div className="flex flex-col items-center">
+                      {renderEvolutionStage(processedEvolutions.evolvesFrom.from, `Evolved from via: ${processedEvolutions.evolvesFrom.method}`, 'from')}
+                      <div className="text-sky-400 text-2xl my-1 sm:my-1.5">↓</div>
+                    </div>
+                  )}
+
+                  {renderEvolutionStage(processedEvolutions.currentStage)}
+                  
+                  {processedEvolutions.evolvesTo.length > 0 && (
+                    <div className="flex flex-col items-center w-full">
+                       <div className="text-sky-400 text-2xl my-1 sm:my-1.5">↓</div>
+                       <p className="text-xs text-slate-400 mb-1.5 sm:mb-2">Evolves to:</p>
+                        <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+                            {processedEvolutions.evolvesTo.map((evoTo, index) => (
+                                <div key={index} className="flex flex-col items-center">
+                                  {renderEvolutionStage(evoTo.to, evoTo.method, 'to')}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                  )}
+                  {processedEvolutions.evolvesTo.length === 0 && !processedEvolutions.evolvesFrom && (
+                    <p className="text-slate-400 text-sm mt-2">This Pokémon does not evolve.</p>
+                  )}
+                   {processedEvolutions.evolvesTo.length === 0 && processedEvolutions.evolvesFrom && (
+                    <p className="text-slate-400 text-sm mt-2">This is the final evolution.</p>
+                  )}
+                </div>
+              )}
+              {!processedEvolutions && !isEvolutionDataLoading && !evolutionDataError && (
+                 <p className="text-slate-400 text-sm">No evolution data available or does not evolve.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>

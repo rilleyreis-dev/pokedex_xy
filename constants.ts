@@ -1,5 +1,5 @@
 
-import { BasePokemon, GymLeaderInfo } from './types';
+import { BasePokemon, GymLeaderInfo, EvolutionDetailFromApi } from './types';
 
 export const INITIAL_POKEMON_LIST: BasePokemon[] = [
   { "name": "chespin", "id": 650, "routes": [] },
@@ -516,71 +516,92 @@ export const getUniqueRoutes = (pokemonList: BasePokemon[]): string[] => {
     });
   });
   return Array.from(allRoutes).sort((a, b) => {
-    // Attempt to sort numerically if routes are like "Route X"
     const numA = parseInt(a.replace(/\D/g, ''), 10);
     const numB = parseInt(b.replace(/\D/g, ''), 10);
     if (!isNaN(numA) && !isNaN(numB)) {
       return numA - numB;
     }
-    return a.localeCompare(b); // Fallback to string sort
+    return a.localeCompare(b); 
   });
 };
 
 export const KALOS_GYM_LEADERS: GymLeaderInfo[] = [
-  {
-    "gym_leader": "Viola",
-    "city": "Santalune City",
-    "specialty": "Inseto",
-    "badge_name": "Insígnia do Inseto",
-    "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/7/75/Bug_Badge.png/50px-Bug_Badge.png"
-  },
-  {
-    "gym_leader": "Grant",
-    "city": "Cyllage City",
-    "specialty": "Pedra",
-    "badge_name": "Insígnia do Penhasco",
-    "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/a/a6/Cliff_Badge.png/50px-Cliff_Badge.png"
-  },
-  {
-    "gym_leader": "Korrina",
-    "city": "Shalour City",
-    "specialty": "Lutador",
-    "badge_name": "Insígnia do Estrondo",
-    "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/6/64/Rumble_Badge.png/50px-Rumble_Badge.png"
-  },
-  {
-    "gym_leader": "Ramos",
-    "city": "Coumarine City",
-    "specialty": "Grama",
-    "badge_name": "Insígnia da Planta",
-    "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/1/13/Plant_Badge.png/50px-Plant_Badge.png"
-  },
-  {
-    "gym_leader": "Clemont",
-    "city": "Lumiose City",
-    "specialty": "Elétrico",
-    "badge_name": "Insígnia da Voltagem",
-    "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/3/34/Voltage_Badge.png/50px-Voltage_Badge.png"
-  },
-  {
-    "gym_leader": "Valerie",
-    "city": "Laverre City",
-    "specialty": "Fada",
-    "badge_name": "Insígnia da Fada",
-    "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/9/93/Fairy_Badge.png/50px-Fairy_Badge.png"
-  },
-  {
-    "gym_leader": "Olympia",
-    "city": "Anistar City",
-    "specialty": "Psíquico",
-    "badge_name": "Insígnia Psíquica",
-    "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/3/33/Psychic_Badge.png/50px-Psychic_Badge.png"
-  },
-  {
-    "gym_leader": "Wulfric",
-    "city": "Snowbelle City",
-    "specialty": "Gelo",
-    "badge_name": "Insígnia do Iceberg",
-    "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/5/53/Iceberg_Badge.png/50px-Iceberg_Badge.png"
-  }
+  { "gym_leader": "Viola", "city": "Santalune City", "specialty": "Inseto", "badge_name": "Insígnia do Inseto", "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/7/75/Bug_Badge.png/50px-Bug_Badge.png" },
+  { "gym_leader": "Grant", "city": "Cyllage City", "specialty": "Pedra", "badge_name": "Insígnia do Penhasco", "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/a/a6/Cliff_Badge.png/50px-Cliff_Badge.png" },
+  { "gym_leader": "Korrina", "city": "Shalour City", "specialty": "Lutador", "badge_name": "Insígnia do Estrondo", "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/6/64/Rumble_Badge.png/50px-Rumble_Badge.png" },
+  { "gym_leader": "Ramos", "city": "Coumarine City", "specialty": "Grama", "badge_name": "Insígnia da Planta", "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/1/13/Plant_Badge.png/50px-Plant_Badge.png" },
+  { "gym_leader": "Clemont", "city": "Lumiose City", "specialty": "Elétrico", "badge_name": "Insígnia da Voltagem", "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/3/34/Voltage_Badge.png/50px-Voltage_Badge.png" },
+  { "gym_leader": "Valerie", "city": "Laverre City", "specialty": "Fada", "badge_name": "Insígnia da Fada", "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/9/93/Fairy_Badge.png/50px-Fairy_Badge.png" },
+  { "gym_leader": "Olympia", "city": "Anistar City", "specialty": "Psíquico", "badge_name": "Insígnia Psíquica", "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/3/33/Psychic_Badge.png/50px-Psychic_Badge.png" },
+  { "gym_leader": "Wulfric", "city": "Snowbelle City", "specialty": "Gelo", "badge_name": "Insígnia do Iceberg", "badge_image": "https://archives.bulbagarden.net/media/upload/thumb/5/53/Iceberg_Badge.png/50px-Iceberg_Badge.png" }
 ];
+
+export const extractIdFromUrl = (url: string): number | null => {
+    if (!url) return null;
+    const parts = url.split('/');
+    const idString = parts[parts.length - 2];
+    const id = parseInt(idString, 10);
+    return isNaN(id) ? null : id;
+};
+
+export const formatEvolutionTrigger = (details: EvolutionDetailFromApi[]): string => {
+    if (!details || details.length === 0) return 'Special';
+
+    const detail = details[0]; // Usually only one item in this array for direct evolutions
+    const trigger = detail.trigger.name;
+    const conditions: string[] = [];
+
+    if (detail.min_level !== null) conditions.push(`Level ${detail.min_level}`);
+    if (detail.min_happiness !== null) conditions.push(`High Friendship`);
+    if (detail.min_affection !== null) conditions.push(`High Affection`);
+    if (detail.min_beauty !== null) conditions.push(`High Beauty`);
+    
+    if (detail.item) conditions.push(`Use ${capitalize(detail.item.name)}`);
+    if (detail.held_item) conditions.push(`Hold ${capitalize(detail.held_item.name)}`);
+    
+    if (trigger === 'trade') {
+        if (detail.trade_species) return `Trade for ${capitalize(detail.trade_species.name)}`;
+        return 'Trade';
+    }
+    
+    if (trigger === 'use-item' && !detail.item) return 'Use an item'; // Should be covered by detail.item
+
+    if (detail.known_move) conditions.push(`Know ${capitalize(detail.known_move.name)}`);
+    if (detail.known_move_type) conditions.push(`Know ${capitalize(detail.known_move_type.name)}-type move`);
+    if (detail.location) conditions.push(`at ${capitalize(detail.location.name)}`);
+    if (detail.party_species) conditions.push(`with ${capitalize(detail.party_species.name)} in party`);
+    if (detail.party_type) conditions.push(`with ${capitalize(detail.party_type.name)}-type in party`);
+
+    if (detail.time_of_day) {
+        if (detail.min_happiness !== null || detail.min_affection !== null) { // e.g. Eevee to Umbreon/Espeon
+             // Remove "High Friendship" if time_of_day is the main differentiator with friendship
+            const friendshipIndex = conditions.indexOf('High Friendship');
+            if (friendshipIndex > -1) conditions.splice(friendshipIndex, 1);
+            const affectionIndex = conditions.indexOf('High Affection');
+            if (affectionIndex > -1) conditions.splice(affectionIndex, 1);
+            
+            conditions.push(`High Friendship during ${capitalize(detail.time_of_day)}`);
+        } else {
+            conditions.push(`during ${capitalize(detail.time_of_day)}`);
+        }
+    }
+
+    if (detail.gender === 1) conditions.push('Female');
+    if (detail.gender === 2) conditions.push('Male');
+
+    if (detail.needs_overworld_rain) conditions.push('during Overworld Rain');
+    if (detail.turn_upside_down) conditions.push('Turn 3DS Upside Down'); // Specific to Inkay
+
+    if (detail.relative_physical_stats !== null) {
+        if (detail.relative_physical_stats > 0) conditions.push('Attack > Defense'); // Tyrogue to Hitmonlee
+        else if (detail.relative_physical_stats < 0) conditions.push('Attack < Defense'); // Tyrogue to Hitmonchan
+        else conditions.push('Attack = Defense'); // Tyrogue to Hitmontop
+    }
+
+    if (conditions.length === 0) {
+        if (trigger === 'level-up') return 'Level up'; // Generic level up if no specific level
+        return capitalize(trigger.replace(/-/g, ' '));
+    }
+    
+    return conditions.join(', ');
+};
