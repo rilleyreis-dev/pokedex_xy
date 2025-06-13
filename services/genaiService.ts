@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai"; // Removed GenerateContentResponse
+import { GoogleGenAI } from "@google/genai"; 
 import { GymLeaderStrategy, SupportedLanguage } from '../types';
 import { t } from '../translations'; 
 
@@ -19,7 +19,7 @@ export const getPokemonEncounterNotes = async (pokemonName: string, language: Su
   }
   
   try {
-    const response = await ai.models.generateContent({ // Type for response will be inferred
+    const response = await ai.models.generateContent({ 
       model: TEXT_MODEL,
       contents: prompt,
       config: {
@@ -52,12 +52,12 @@ export const getGymLeaderCounterStrategy = async (
   }
 
   try {
-    const response = await ai.models.generateContent({ // Type for response will be inferred
+    const response = await ai.models.generateContent({ 
       model: TEXT_MODEL,
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      }
+      // config: {
+      //   responseMimeType: "application/json", // Removed this line
+      // }
     });
 
     let jsonStr = response.text.trim();
