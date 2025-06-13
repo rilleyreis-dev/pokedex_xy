@@ -1,27 +1,24 @@
 
 import React from 'react';
-import { getTranslatedType, t } from '../translations';
-import { SupportedLanguage } from '../types';
+import { capitalize } from '../constants';
 
 interface TypeFilterProps {
-  allTypes: string[]; // English type names from STANDARD_POKEMON_TYPES
-  selectedTypes: string[]; 
-  onTypeToggle: (type: string) => void; 
-  currentLanguage: SupportedLanguage;
+  allTypes: string[];
+  selectedTypes: string[]; // Changed from selectedType
+  onTypeToggle: (type: string) => void; // Changed from onTypeSelect
 }
 
-const TypeFilter: React.FC<TypeFilterProps> = ({ allTypes, selectedTypes, onTypeToggle, currentLanguage }) => {
+const TypeFilter: React.FC<TypeFilterProps> = ({ allTypes, selectedTypes, onTypeToggle }) => {
   return (
     <div className="w-full">
-      <p className="text-xs text-slate-400 mb-1.5 px-1">{t("Filter by Type(s):", currentLanguage)}</p>
+      <p className="text-xs text-slate-400 mb-1.5 px-1">Filter by Type(s):</p>
       <div 
         className="flex flex-wrap gap-2 items-center p-1 rounded-md" 
         role="group" 
-        aria-label={t("Filter by Pokémon type", currentLanguage)}
+        aria-label="Filter by Pokémon type"
       >
-        {allTypes.map(type => { 
+        {allTypes.map(type => {
           const isActive = selectedTypes.includes(type);
-          const translatedTypeName = getTranslatedType(type, currentLanguage);
           return (
             <button
               key={type}
@@ -36,9 +33,9 @@ const TypeFilter: React.FC<TypeFilterProps> = ({ allTypes, selectedTypes, onType
                 }
               `}
               aria-pressed={isActive}
-              aria-label={translatedTypeName}
+              aria-label={capitalize(type)}
             >
-              {translatedTypeName}
+              {capitalize(type)}
             </button>
           );
         })}
