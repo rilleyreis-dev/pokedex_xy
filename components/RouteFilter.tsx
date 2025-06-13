@@ -1,26 +1,29 @@
 
 import React from 'react';
 import { capitalize } from '../constants';
+import { t } from '../translations';
+import { SupportedLanguage } from '../types';
 
 interface RouteFilterProps {
-  allRoutes: string[];
+  allRoutes: string[]; 
   selectedRoute: string;
   onRouteSelect: (route: string) => void;
+  currentLanguage: SupportedLanguage;
 }
 
-const RouteFilter: React.FC<RouteFilterProps> = ({ allRoutes, selectedRoute, onRouteSelect }) => {
+const RouteFilter: React.FC<RouteFilterProps> = ({ allRoutes, selectedRoute, onRouteSelect, currentLanguage }) => {
   return (
     <div className="relative w-full">
       <select
         value={selectedRoute}
         onChange={(e) => onRouteSelect(e.target.value)}
         className="appearance-none block w-full px-3 py-1.5 text-xs bg-slate-700 text-slate-300 rounded-full font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-sky-500 pr-8"
-        aria-label="Filter by route"
+        aria-label={t("Filter by route", currentLanguage)}
       >
         <option value="" className="bg-slate-800 text-slate-200 py-1 font-medium">
-          All Routes
+          {t("All Routes", currentLanguage)}
         </option>
-        {allRoutes.map(route => (
+        {allRoutes.map(route => ( 
           <option key={route} value={route} className="bg-slate-800 text-slate-200 py-1 font-medium">
             {capitalize(route)}
           </option>

@@ -1,7 +1,7 @@
 {
-  "name": "Kalos Pokédex",
+  "name": "Pokédex de Kalos",
   "short_name": "KalosDex",
-  "description": "A Pokedex application showcasing Pokemon from the Kalos region.",
+  "description": "Uma aplicação Pokédex mostrando Pokémon da região de Kalos.",
   "start_url": "/",
   "display": "standalone",
   "scope": "/",
