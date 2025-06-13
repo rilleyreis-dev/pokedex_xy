@@ -1,7 +1,7 @@
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI } from "@google/genai"; // Removed GenerateContentResponse
 import { GymLeaderStrategy, SupportedLanguage } from '../types';
-import { t } from '../translations'; // For potential use if needed, but prompts are mostly self-contained
+import { t } from '../translations'; 
 
 // API key is automatically sourced from process.env.API_KEY
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -19,7 +19,7 @@ export const getPokemonEncounterNotes = async (pokemonName: string, language: Su
   }
   
   try {
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    const response = await ai.models.generateContent({ // Type for response will be inferred
       model: TEXT_MODEL,
       contents: prompt,
       config: {
@@ -52,7 +52,7 @@ export const getGymLeaderCounterStrategy = async (
   }
 
   try {
-    const response: GenerateContentResponse = await ai.models.generateContent({
+    const response = await ai.models.generateContent({ // Type for response will be inferred
       model: TEXT_MODEL,
       contents: prompt,
       config: {
