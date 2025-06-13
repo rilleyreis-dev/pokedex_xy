@@ -1,5 +1,6 @@
 {
   "name": "Kalos Pokedex",
   "description": "A Pokedex application showcasing a specific list of Pokemon, fetching details from PokeAPI.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "prompt": ""
 }
