@@ -2,7 +2,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import './translations'; // Import translations to ensure they are bundled if necessary, though direct imports in components are typical.
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
