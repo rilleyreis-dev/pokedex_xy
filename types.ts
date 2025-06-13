@@ -1,8 +1,10 @@
 
+export type SupportedLanguage = 'pt-BR' | 'en';
+
 export interface BasePokemon {
-  name: string;
+  name: string; // English name from API, used as key
   id: number;
-  routes?: string[];
+  routes?: string[]; // e.g., "Rota 2", "Rota 3" (Kalos specific, kept in PT for this app)
 }
 
 export interface PokemonSprites {
@@ -20,14 +22,14 @@ export interface PokemonSprites {
 export interface PokemonType {
   slot: number;
   type: {
-    name: string;
+    name: string; // English type name, e.g., "grass", "fire"
     url: string;
   };
 }
 
 export interface PokemonAbility {
   ability: {
-    name: string;
+    name: string; // English ability name
     url: string;
   };
   is_hidden: boolean;
@@ -38,7 +40,7 @@ export interface PokemonStat {
   base_stat: number;
   effort: number;
   stat: {
-    name: string;
+    name: string; // English stat name, e.g., "hp", "attack"
     url: string;
   };
 }
@@ -50,15 +52,15 @@ export interface NameUrlPair {
 
 export interface PokemonDetail {
   id: number;
-  name: string;
+  name: string; // English name from API
   height: number; // decimetres
   weight: number; // hectograms
   sprites: PokemonSprites;
   types: PokemonType[];
   abilities: PokemonAbility[];
   stats: PokemonStat[];
-  species: NameUrlPair; // Added for evolution chain
-  routes?: string[]; 
+  species: NameUrlPair; 
+  routes?: string[]; // Portuguese route names from constants.ts
 }
 
 export enum PokemonStatName {
@@ -73,10 +75,12 @@ export enum PokemonStatName {
 export const MAX_STAT_VALUE = 255;
 
 export interface GymLeaderInfo {
-  gym_leader: string;
-  city: string;
-  specialty: string; // Specialty type in Portuguese
-  badge_name: string;
+  id: string; // unique identifier, e.g., "viola"
+  gym_leader_key: string; // translation key for leader's name
+  city_key: string; // translation key for city's name
+  specialty_key: string; // English type key, e.g., "bug"
+  specialty_display_key: string; // translation key for type, e.g., "type_bug"
+  badge_name_key: string; // translation key for badge name
   badge_image: string;
 }
 
@@ -99,16 +103,15 @@ export interface Genus {
 
 export interface PokemonSpecies {
   id: number;
-  name: string;
+  name: string; // English name from API
   evolution_chain: EvolutionChainReference;
   evolves_from_species: NameUrlPair | null;
   flavor_text_entries: FlavorTextEntry[];
   genera: Genus[];
-  // Add other fields from species data as needed
 }
 
 export interface PokemonSpeciesReference {
-    name: string;
+    name: string; // English name from API
     url: string;
 }
 
@@ -148,7 +151,7 @@ export interface EvolutionChainResponse {
 
 // Types for processed evolution data for display
 export interface EvolutionStageInfo {
-    name: string;
+    name: string; // Pokémon name, translated for display
     id: number;
     imageUrl: string;
 }
@@ -156,11 +159,26 @@ export interface EvolutionStageInfo {
 export interface EvolutionStep {
     from: EvolutionStageInfo;
     to: EvolutionStageInfo;
-    method: string;
+    method: string; // Evolution method description, translated for display
 }
 
 export interface ProcessedEvolutionDisplayInfo {
     evolvesFrom?: EvolutionStep;
     currentStage: EvolutionStageInfo;
-    evolvesTo: EvolutionStep[]; // Can evolve into multiple Pokemon (e.g., Eevee)
+    evolvesTo: EvolutionStep[];
 }
+
+// Translation mapping types
+export type TranslationMap = {
+  [key: string]: string;
+};
+
+export type AllTranslations = {
+  [lang in SupportedLanguage]: {
+    types: TranslationMap;
+    stats: TranslationMap;
+    ui: TranslationMap;
+    pokemon_names?: TranslationMap; // Optional: if we need to override API names for display
+    gym_leader_details?: TranslationMap; // For leader names, cities, badges
+  };
+};
