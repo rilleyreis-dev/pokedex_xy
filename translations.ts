@@ -54,7 +54,10 @@ const translationsData: AllTranslations = {
       // PokemonModal
       "Abilities": "Habilidades",
       "Base Stats": "Atributos Base",
-      "Found on Routes": "Encontrado nas Rotas",
+      "Found on Routes": "Encontrado nas Rotas", 
+      "Found on Routes / How to obtain": "Encontrado em / Como obter",
+      "Method/Location": "Método/Local",
+      "Probability": "Probabilidade",
       "Evolutions": "Evoluções",
       "Height": "Altura",
       "Weight": "Peso",
@@ -81,9 +84,13 @@ const translationsData: AllTranslations = {
       "Filter by Type(s):": "Filtrar por Tipo(s):",
       "Filter by Pokémon type": "Filtrar por tipo de Pokémon",
       
-      // GymLeaderCard
+      // GymLeaderCard & GymLeaderModal
       "Mark as defeated": "Marcar como derrotado",
       "Unmark as defeated": "Desmarcar como derrotado",
+      "Battle Tips": "Dicas de Batalha",
+      "Weak to:": "Fraco contra:",
+      "Strong against:": "Forte contra:",
+      "Pokémon Team": "Equipe Pokémon",
 
       // App & LanguageSwitcher
       "Kalos Pokédex": "Pokédex de Kalos",
@@ -92,6 +99,7 @@ const translationsData: AllTranslations = {
       "Pokédex": "Pokédex",
       "Gym Leaders": "Líderes de Ginásio",
       "Loading Pokédex data...": "Carregando dados da Pokédex...",
+      "Loading Gym Leader data...": "Carregando dados dos Líderes de Ginásio...",
       "No Pokémon found": "Nenhum Pokémon encontrado",
       "for": "para", 
       "on": "em", 
@@ -104,6 +112,12 @@ const translationsData: AllTranslations = {
       "Change language": "Mudar idioma",
       "Switch to English": "Mudar para Inglês", 
       "Switch to Portuguese (Brazil)": "Mudar para Português (Brasil)", 
+      "Unknown Pokémon": "Pokémon Desconhecido",
+
+      // ThemeSwitcher
+      "Toggle theme": "Alternar tema",
+      "Light mode": "Modo claro",
+      "Dark mode": "Modo escuro",
 
       // formatEvolutionTrigger
       "Level": "Nível",
@@ -129,32 +143,42 @@ const translationsData: AllTranslations = {
       "Attack = Defense": "Ataque = Defesa",
       "Level up": "Subir de nível",
       "Special": "Especial",
+      "day": "Dia",
+      "night": "Noite",
 
       // Gym Leader Details (Names, Cities, Badges)
       "viola_name": "Viola",
       "santalune_city_name": "Santalune City",
       "bug_badge_name": "Insígnia do Inseto",
+      "viola_tips": "Use ataques do tipo Fogo, Voador ou Pedra para vencer Viola rapidamente.",
       "grant_name": "Grant",
       "cyllage_city_name": "Cyllage City",
       "cliff_badge_name": "Insígnia da Penha",
+      "grant_tips": "Pokémon do tipo Água ou Planta são super eficazes contra a equipe de Grant.",
       "korrina_name": "Korrina",
       "shalour_city_name": "Shalour City",
       "rumble_badge_name": "Insígnia do Estrondo",
+      "korrina_tips": "Ataques Voadores, Psíquicos ou Fada causarão dano pesado.",
       "ramos_name": "Ramos",
       "coumarine_city_name": "Coumarine City",
       "plant_badge_name": "Insígnia da Folhagem",
+      "ramos_tips": "Tipos Fogo e Gelo são suas melhores apostas contra Ramos.",
       "clemont_name": "Clemont",
       "lumiose_city_name": "Lumiose City",
       "voltage_badge_name": "Insígnia da Voltagem",
+      "clemont_tips": "Um forte Pokémon do tipo Terra anulará os ataques elétricos de Clemont.",
       "valerie_name": "Valerie",
       "laverre_city_name": "Laverre City",
       "fairy_badge_name": "Insígnia da Fada",
+      "valerie_tips": "Pokémon do tipo Veneno ou Metálico terão vantagem contra Valerie.",
       "olympia_name": "Olympia",
       "anistar_city_name": "Anistar City",
       "psychic_badge_name": "Insígnia Psíquica",
+      "olympia_tips": "Use Pokémon do tipo Inseto, Fantasma ou Sombrio para superar Olympia.",
       "wulfric_name": "Wulfric",
       "snowbelle_city_name": "Snowbelle City",
       "iceberg_badge_name": "Insígnia do Iceberg",
+      "wulfric_tips": "Ataques do tipo Fogo ou Lutador derreterão a equipe de Wulfric."
     },
     pokemon_names: { 
         // "mr-mime": "Mr. Mime", 
@@ -201,7 +225,10 @@ const translationsData: AllTranslations = {
       // PokemonModal
       "Abilities": "Abilities",
       "Base Stats": "Base Stats",
-      "Found on Routes": "Found on Routes",
+      "Found on Routes": "Found on Routes", 
+      "Found on Routes / How to obtain": "Found on Routes / How to obtain",
+      "Method/Location": "Method/Location",
+      "Probability": "Probability",
       "Evolutions": "Evolutions",
       "Height": "Height",
       "Weight": "Weight",
@@ -228,9 +255,13 @@ const translationsData: AllTranslations = {
       "Filter by Type(s):": "Filter by Type(s):",
       "Filter by Pokémon type": "Filter by Pokémon type",
       
-      // GymLeaderCard
+      // GymLeaderCard & GymLeaderModal
       "Mark as defeated": "Mark as defeated",
       "Unmark as defeated": "Unmark as defeated",
+      "Battle Tips": "Battle Tips",
+      "Weak to:": "Weak to:",
+      "Strong against:": "Strong against:",
+      "Pokémon Team": "Pokémon Team", 
 
       // App & LanguageSwitcher
       "Kalos Pokédex": "Kalos Pokédex",
@@ -239,6 +270,7 @@ const translationsData: AllTranslations = {
       "Pokédex": "Pokédex",
       "Gym Leaders": "Gym Leaders",
       "Loading Pokédex data...": "Loading Pokédex data...",
+      "Loading Gym Leader data...": "Loading Gym Leader data...",
       "No Pokémon found": "No Pokémon found",
       "for": "for", 
       "on": "on", 
@@ -251,6 +283,12 @@ const translationsData: AllTranslations = {
       "Change language": "Change language",
       "Switch to English": "Switch to English",
       "Switch to Portuguese (Brazil)": "Switch to Portuguese (Brazil)",
+      "Unknown Pokémon": "Unknown Pokémon",
+
+      // ThemeSwitcher
+      "Toggle theme": "Toggle theme",
+      "Light mode": "Light mode",
+      "Dark mode": "Dark mode",
       
       // formatEvolutionTrigger
       "Level": "Level",
@@ -276,32 +314,43 @@ const translationsData: AllTranslations = {
       "Attack = Defense": "Attack = Defense",
       "Level up": "Level up",
       "Special": "Special",
+      "day": "Day",
+      "night": "Night",
 
-      // Gym Leader Details (Names, Cities, Badges)
+
+      // Gym Leader Details (Names, Cities, Badges, Tips)
       "viola_name": "Viola",
       "santalune_city_name": "Santalune City",
       "bug_badge_name": "Bug Badge",
+      "viola_tips": "Use Fire, Flying, or Rock-type attacks to defeat Viola quickly.",
       "grant_name": "Grant",
       "cyllage_city_name": "Cyllage City",
       "cliff_badge_name": "Cliff Badge",
+      "grant_tips": "Water or Grass-type Pokémon are super effective against Grant's team.",
       "korrina_name": "Korrina",
       "shalour_city_name": "Shalour City",
       "rumble_badge_name": "Rumble Badge",
+      "korrina_tips": "Flying, Psychic, or Fairy attacks will deal heavy damage.",
       "ramos_name": "Ramos",
       "coumarine_city_name": "Coumarine City",
       "plant_badge_name": "Plant Badge",
+      "ramos_tips": "Fire and Ice types are your best bets against Ramos.",
       "clemont_name": "Clemont",
       "lumiose_city_name": "Lumiose City",
       "voltage_badge_name": "Voltage Badge",
+      "clemont_tips": "A strong Ground-type Pokémon will nullify Clemont's electric attacks.",
       "valerie_name": "Valerie",
       "laverre_city_name": "Laverre City",
       "fairy_badge_name": "Fairy Badge",
+      "valerie_tips": "Poison or Steel-type Pokémon will have an advantage against Valerie.",
       "olympia_name": "Olympia",
       "anistar_city_name": "Anistar City",
       "psychic_badge_name": "Psychic Badge",
+      "olympia_tips": "Use Bug, Ghost, or Dark-type Pokémon to overcome Olympia.",
       "wulfric_name": "Wulfric",
       "snowbelle_city_name": "Snowbelle City",
       "iceberg_badge_name": "Iceberg Badge",
+      "wulfric_tips": "Fire or Fighting-type attacks will melt Wulfric's team."
     },
      pokemon_names: {
         // "mr-mime": "Mr. Mime", 
@@ -327,12 +376,10 @@ export const t = (key: string, lang: SupportedLanguage, replacements?: {[placeho
   return translation;
 };
 
-// Function to get a translated Pokémon name if specific overrides are needed, otherwise use a base capitalization.
-// The API provides names, this is mainly for display consistency if API names are e.g. all lowercase.
 export const getTranslatedPokemonName = (name: string, lang: SupportedLanguage): string => {
   const translations = translationsData[lang].pokemon_names;
   if (translations && translations[name.toLowerCase()]) {
     return translations[name.toLowerCase()];
   }
-  return baseCapitalize(name); // Default to capitalized English name if no specific translation or override
+  return baseCapitalize(name); 
 };
