@@ -1,9 +1,9 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { INITIAL_POKEMON_LIST, getUniqueRoutes, STANDARD_POKEMON_TYPES, capitalize, formatId, KALOS_GYM_LEADERS, capitalizeForDisplay } from './constants';
-import { BasePokemon, PokemonDetail, GymLeaderInfo, SupportedLanguage } from './types';
+import { INITIAL_POKEMON_LIST, getUniqueRoutes, STANDARD_POKEMON_TYPES, KALOS_GYM_LEADERS } from './constants';
+import { BasePokemon, PokemonDetail, GymLeaderInfo, SupportedLanguage, Theme, PokemonModalProps, GymLeaderModalProps } from './types';
 import { getPokemonDetailsById } from './services/pokemonService';
-import { t, getTranslatedType, getTranslatedPokemonName } from './translations';
+import { t, getTranslatedPokemonName } from './translations';
 import PokemonCard from './components/PokemonCard';
 import PokemonModal from './components/PokemonModal';
 import SearchBar from './components/SearchBar';
@@ -11,12 +11,16 @@ import RouteFilter from './components/RouteFilter';
 import TypeFilter from './components/TypeFilter';
 import LoadingSpinner from './components/LoadingSpinner';
 import GymLeaderCard from './components/GymLeaderCard';
+import GymLeaderModal from './components/GymLeaderModal';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import ThemeSwitcher from './components/ThemeSwitcher';
 
 type View = 'pokedex' | 'gymLeaders';
 
 const CAPTURED_POKEMON_STORAGE_KEY = 'kalosPokedexCapturedIds';
 const DEFEATED_GYM_LEADERS_STORAGE_KEY = 'kalosPokedexDefeatedGymLeaders';
+const POKEMON_DETAILS_BATCH_SIZE = 25; 
+const DELAY_BETWEEN_BATCHES_MS = 200; 
 
 const getDefaultLanguage = (): SupportedLanguage => {
   const storedLang = localStorage.getItem('kalosPokedexLanguage') as SupportedLanguage | null;
@@ -27,9 +31,19 @@ const getDefaultLanguage = (): SupportedLanguage => {
   return browserLang === 'pt' ? 'pt-BR' : 'en';
 };
 
+const getDefaultTheme = (): Theme => {
+  const storedTheme = localStorage.getItem('kalosPokedexTheme') as Theme | null;
+  if (storedTheme && (storedTheme === 'light' || storedTheme === 'dark')) {
+    return storedTheme;
+  }
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
+
 
 const App: React.FC = () => {
   const [currentLanguage, setCurrentLanguage] = useState<SupportedLanguage>(getDefaultLanguage());
+  const [currentTheme, setCurrentTheme] = useState<Theme>(getDefaultTheme());
+  
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedRoute, setSelectedRoute] = useState<string>('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
@@ -49,6 +63,9 @@ const App: React.FC = () => {
     return storedDefeated ? new Set(JSON.parse(storedDefeated)) : new Set();
   }); 
 
+  const [selectedGymLeaderInfo, setSelectedGymLeaderInfo] = useState<GymLeaderInfo | null>(null);
+  const [isGymLeaderModalOpen, setIsGymLeaderModalOpen] = useState<boolean>(false);
+
   const uniqueRoutes = useMemo(() => getUniqueRoutes(INITIAL_POKEMON_LIST), []);
 
   useEffect(() => {
@@ -57,9 +74,18 @@ const App: React.FC = () => {
   }, [currentLanguage]);
 
   useEffect(() => {
+    if (currentTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('kalosPokedexTheme', currentTheme);
+  }, [currentTheme]);
+
+  useEffect(() => {
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/public/sw.js')
+        navigator.serviceWorker.register('/public/sw.js', { scope: '/' }) 
           .then(registration => {
             console.log('Service Worker registrado com escopo:', registration.scope);
           })
@@ -73,35 +99,51 @@ const App: React.FC = () => {
   useEffect(() => {
     const fetchAllDetails = async () => {
       setIsInitialDataLoading(true);
-      const cache = new Map<number, PokemonDetail | null>();
-      await Promise.allSettled(
-        INITIAL_POKEMON_LIST.map(async (pokemon) => {
-          try {
-            const details = await getPokemonDetailsById(pokemon.id);
-            cache.set(pokemon.id, details);
-          } catch (error) {
-            console.error(`Falha ao buscar detalhes para ${pokemon.name} (ID: ${pokemon.id})`, error);
-            cache.set(pokemon.id, null); 
-          }
-        })
-      );
-      setDetailsCache(cache);
+      const newCache = new Map<number, PokemonDetail | null>();
+      const allPokemonIdsToFetch = new Set<number>();
+      INITIAL_POKEMON_LIST.forEach(p => allPokemonIdsToFetch.add(p.id));
+      KALOS_GYM_LEADERS.forEach(leader => leader.pokemon_ids.forEach(id => allPokemonIdsToFetch.add(id)));
+
+      const uniqueIdsArray = Array.from(allPokemonIdsToFetch);
+
+      for (let i = 0; i < uniqueIdsArray.length; i += POKEMON_DETAILS_BATCH_SIZE) {
+        const batchIds = uniqueIdsArray.slice(i, i + POKEMON_DETAILS_BATCH_SIZE);
+        await Promise.allSettled(
+          batchIds.map(async (id) => {
+            try {
+              const details = await getPokemonDetailsById(id);
+              newCache.set(id, details);
+            } catch (error) {
+              const pokemonFromInitialList = INITIAL_POKEMON_LIST.find(p => p.id === id);
+              const nameForError = pokemonFromInitialList ? pokemonFromInitialList.name : `ID ${id}`;
+              console.error(`Falha ao buscar detalhes para ${nameForError}`, error);
+              newCache.set(id, null); 
+            }
+          })
+        );
+        setDetailsCache(prevCache => new Map([...Array.from(prevCache.entries()), ...Array.from(newCache.entries())]));
+        
+        if (i + POKEMON_DETAILS_BATCH_SIZE < uniqueIdsArray.length) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
+        }
+      }
       setIsInitialDataLoading(false);
     };
 
     fetchAllDetails();
   }, []);
 
-  // Save captured Pokémon IDs to localStorage
   useEffect(() => {
     localStorage.setItem(CAPTURED_POKEMON_STORAGE_KEY, JSON.stringify(Array.from(capturedPokemonIds)));
   }, [capturedPokemonIds]);
 
-  // Save defeated Gym Leader IDs to localStorage
   useEffect(() => {
     localStorage.setItem(DEFEATED_GYM_LEADERS_STORAGE_KEY, JSON.stringify(Array.from(defeatedGymLeaders)));
   }, [defeatedGymLeaders]);
 
+  const toggleTheme = () => {
+    setCurrentTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
+  };
 
   const handleToggleCaptured = useCallback((pokemonId: number, event: React.MouseEvent) => {
     event.stopPropagation(); 
@@ -129,141 +171,102 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const handleCardClick = (pokemon: PokemonDetail) => {
+    setSelectedPokemon(pokemon);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPokemon(null);
+  };
+
+  const openGymLeaderModal = (gymInfo: GymLeaderInfo) => {
+    setSelectedGymLeaderInfo(gymInfo);
+    setIsGymLeaderModalOpen(true);
+  };
+
+  const closeGymLeaderModal = () => {
+    setIsGymLeaderModalOpen(false);
+    setSelectedGymLeaderInfo(null);
+  };
+
+  const handleOpenPokemonModalFromTeam = (pokemonId: number) => {
+    const pokemonDetail = detailsCache.get(pokemonId);
+    if (pokemonDetail) {
+      closeGymLeaderModal(); 
+      const basePokemonInfo = INITIAL_POKEMON_LIST.find(p => p.id === pokemonId);
+      const detailWithRoutes = {
+        ...pokemonDetail,
+        routes: basePokemonInfo?.routes || [],
+      };
+      handleCardClick(detailWithRoutes);
+    } else {
+        console.warn(`Details for Pokémon ID ${pokemonId} not found in cache. Cannot open modal.`);
+    }
+  };
 
   const filteredPokemon = useMemo(() => {
-    if (currentView !== 'pokedex' || (isInitialDataLoading && detailsCache.size === 0)) { 
-        return [];
-    }
+    return INITIAL_POKEMON_LIST.filter(pokemon => {
+      const basePokemonName = pokemon.name.toLowerCase();
+      const translatedPokemonName = getTranslatedPokemonName(pokemon.name, currentLanguage).toLowerCase();
+      const searchLower = searchTerm.toLowerCase();
 
-    let pokemonToFilter = INITIAL_POKEMON_LIST;
+      const matchesSearchTerm = basePokemonName.includes(searchLower) ||
+                                translatedPokemonName.includes(searchLower) ||
+                                pokemon.id.toString().includes(searchLower);
 
-    if (searchTerm.trim()) {
-      const lowerSearchTerm = searchTerm.toLowerCase().trim();
-      pokemonToFilter = pokemonToFilter.filter(pokemon =>
-        pokemon.name.toLowerCase().includes(lowerSearchTerm) || 
-        getTranslatedPokemonName(pokemon.name, currentLanguage).toLowerCase().includes(lowerSearchTerm) ||
-        pokemon.id.toString().includes(lowerSearchTerm) ||
-        formatId(pokemon.id).includes(lowerSearchTerm)
-      );
-    }
-
-    if (selectedRoute) { 
-      pokemonToFilter = pokemonToFilter.filter(pokemon =>
-        pokemon.routes && pokemon.routes.includes(selectedRoute)
-      );
-    }
-
-    if (selectedTypes.length > 0) { 
-      pokemonToFilter = pokemonToFilter.filter(pokemon => {
-        const details = detailsCache.get(pokemon.id);
-        if (!details) return false; 
-        return details.types.some(typeInfo => selectedTypes.includes(typeInfo.type.name)); 
-      });
-    }
-    
-    return pokemonToFilter;
-  }, [currentView, searchTerm, selectedRoute, selectedTypes, detailsCache, isInitialDataLoading, currentLanguage]);
-
-  const handleSearch = useCallback((term: string) => {
-    setSearchTerm(term);
-  }, []);
-
-  const handleRouteSelect = useCallback((route: string) => { 
-    setSelectedRoute(route);
-  }, []);
-
-  const handleTypeToggle = useCallback((type: string) => {  
-    setSelectedTypes(prevSelectedTypes => {
-      if (prevSelectedTypes.includes(type)) {
-        return prevSelectedTypes.filter(t => t !== type); 
-      } else {
-        return [...prevSelectedTypes, type]; 
-      }
+      const matchesRoute = !selectedRoute || (pokemon.routes?.some(routeInfo => routeInfo.route === selectedRoute) ?? false);
+      
+      const details = detailsCache.get(pokemon.id);
+      const matchesType = selectedTypes.length === 0 || 
+                          (details && details.types.some(typeInfo => selectedTypes.includes(typeInfo.type.name.toLowerCase())));
+      
+      return matchesSearchTerm && matchesRoute && matchesType;
     });
-  }, []);
+  }, [searchTerm, selectedRoute, selectedTypes, detailsCache, currentLanguage]);
 
-  const handleCardClick = useCallback((pokemonDetailsFromCard: PokemonDetail) => {
-    const baseData = INITIAL_POKEMON_LIST.find(p => p.id === pokemonDetailsFromCard.id);
-    const cachedData = detailsCache.get(pokemonDetailsFromCard.id);
-
-    const finalDetails = {
-        ...(cachedData || pokemonDetailsFromCard), 
-        routes: baseData?.routes || (cachedData || pokemonDetailsFromCard).routes || [] 
-    };
-
-    setSelectedPokemon(finalDetails);
-    setIsModalOpen(true);
-  }, [detailsCache]);
-  
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.classList.add('overflow-hidden');
-    } else {
-      document.body.classList.remove('overflow-hidden');
-    }
-    return () => {
-        document.body.classList.remove('overflow-hidden');
-    };
-  }, [isModalOpen]);
-
-
-  const closeModal = useCallback(() => {
-    setIsModalOpen(false);
-    setTimeout(() => setSelectedPokemon(null), 300);
-  }, []);
-  
-  const formatSelectedTypesMessage = () => {
-    if (selectedTypes.length === 0) return '';
-    const translatedSelectedTypes = selectedTypes.map(type => getTranslatedType(type, currentLanguage));
-    if (translatedSelectedTypes.length === 1) return ` ${t('of type', currentLanguage)} ${translatedSelectedTypes[0]}`;
-    
-    const lastType = translatedSelectedTypes[translatedSelectedTypes.length - 1];
-    const initialTypes = translatedSelectedTypes.slice(0, -1);
-    const conjunction = currentLanguage === 'pt-BR' ? 'e' : 'and';
-    return ` ${t('of types', currentLanguage)} ${initialTypes.join(', ')} ${conjunction} ${lastType}`;
-  };
-  
-  const handleChangeLanguage = (lang: SupportedLanguage) => {
-    setCurrentLanguage(lang);
-  };
-
+  const spinnerColor = currentTheme === 'dark' ? 'text-sky-400' : 'text-sky-600'; // This can remain as Tailwind classes since it's dynamic
 
   const renderPokedexView = () => (
     <>
-      <div className="flex flex-col md:flex-row flex-wrap gap-4 items-start mb-6 sm:mb-8 w-full max-w-4xl mx-auto">
-        <div className="w-full md:flex-1 md:min-w-[250px]">
-          <SearchBar onSearch={handleSearch} currentLanguage={currentLanguage} />
+      <div className="mb-4 sm:mb-6 grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 items-end">
+        <div className="md:col-span-2">
+          <SearchBar onSearch={setSearchTerm} initialTerm={searchTerm} currentLanguage={currentLanguage} />
         </div>
-        <div className="w-full sm:w-auto md:min-w-[180px]">
-          <RouteFilter 
-            allRoutes={uniqueRoutes} 
-            selectedRoute={selectedRoute} 
-            onRouteSelect={handleRouteSelect} 
-            currentLanguage={currentLanguage}
-          />
-        </div>
-        <div className="w-full md:flex-1 md:min-w-[300px]">
-          <TypeFilter 
-            allTypes={STANDARD_POKEMON_TYPES} 
-            selectedTypes={selectedTypes} 
-            onTypeToggle={handleTypeToggle} 
-            currentLanguage={currentLanguage}
-          />
-        </div>
+        <RouteFilter allRoutes={uniqueRoutes} selectedRoute={selectedRoute} onRouteSelect={setSelectedRoute} currentLanguage={currentLanguage} />
       </div>
-      
-      {isInitialDataLoading ? (
-        <div className="text-center py-20">
-          <LoadingSpinner size="lg" />
-          <p className="text-slate-400 mt-4 text-lg">{t("Loading Pokédex data...", currentLanguage)}</p>
+      <div className="mb-4 sm:mb-6">
+        <TypeFilter allTypes={STANDARD_POKEMON_TYPES} selectedTypes={selectedTypes} onTypeToggle={handleTypeToggle} currentLanguage={currentLanguage} />
+      </div>
+
+      {isInitialDataLoading && filteredPokemon.length === 0 && (
+          <div className="text-center py-10">
+              <LoadingSpinner size="lg" color={spinnerColor}/>
+              <p className={`mt-4 themed-app-subtitle`}>{t('Loading Pokédex data...', currentLanguage)}</p>
+          </div>
+      )}
+
+      {!isInitialDataLoading && filteredPokemon.length === 0 && (
+        <div className="text-center py-10 px-4">
+          <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/201-question.png" alt={t("No Pokémon found", currentLanguage)} className="w-24 h-24 mx-auto mb-4 opacity-50" />
+          <h3 className={`text-xl font-semibold themed-app-subtitle mb-2`}>{t("No Pokémon found", currentLanguage)}</h3>
+          <p className={`themed-app-subtitle`}>
+            {t("Try adjusting your search or filters.", currentLanguage)}
+          </p>
         </div>
-      ) : filteredPokemon.length > 0 ? (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3 sm:gap-4">
-          {filteredPokemon.map((pokemon: BasePokemon) => (
+      )}
+
+      {filteredPokemon.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+          {filteredPokemon.map(pokemon => (
             <PokemonCard
               key={pokemon.id}
               basePokemon={pokemon}
-              onCardClick={handleCardClick}
+              onCardClick={(details) => {
+                const baseInfo = INITIAL_POKEMON_LIST.find(p => p.id === details.id);
+                handleCardClick({ ...details, routes: baseInfo?.routes || [] });
+              }}
               initialDetails={detailsCache.get(pokemon.id)}
               isCaptured={capturedPokemonIds.has(pokemon.id)}
               onToggleCaptured={handleToggleCaptured}
@@ -271,116 +274,109 @@ const App: React.FC = () => {
             />
           ))}
         </div>
-      ) : (
-        <div className="text-center py-10 sm:py-12">
-          <p className="text-xl sm:text-2xl text-slate-500 mb-2">
-            {t("No Pokémon found", currentLanguage)}
-            {searchTerm.trim() && ` ${t('for', currentLanguage)} "${capitalizeForDisplay(searchTerm, currentLanguage)}"`}
-            {selectedRoute && ` ${t('on', currentLanguage)} ${capitalize(selectedRoute)}`} 
-            {formatSelectedTypesMessage()}
-          </p>
-          <p className="text-slate-600 text-sm sm:text-base">{t("Try adjusting your search or filters.", currentLanguage)}</p>
-           <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/201-question.png" alt={t("Unknown Pokémon", currentLanguage)} className="w-20 h-20 sm:w-24 sm:h-24 mx-auto mt-4 opacity-50"/>
-        </div>
       )}
     </>
   );
 
   const renderGymLeadersView = () => (
-    <section className="my-6 sm:my-8">
-       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 max-w-7xl mx-auto">
-        {KALOS_GYM_LEADERS.map((gymLeader) => ( 
-          <GymLeaderCard 
-            key={gymLeader.id} 
-            gymInfo={gymLeader}
-            isDefeated={defeatedGymLeaders.has(gymLeader.id)}
-            onToggleDefeated={handleToggleGymLeaderDefeated}
-            currentLanguage={currentLanguage}
-          />
-        ))}
-      </div>
-    </section>
+    <>
+      {isInitialDataLoading && KALOS_GYM_LEADERS.length > 0 && (
+          <div className="text-center py-10">
+              <LoadingSpinner size="lg" color={spinnerColor} />
+              <p className={`mt-4 themed-app-subtitle`}>{t('Loading Gym Leader data...', currentLanguage)}</p>
+          </div>
+      )}
+      {!isInitialDataLoading && (
+        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4 max-w-7xl mx-auto">
+          {KALOS_GYM_LEADERS.map(gymInfo => (
+            <GymLeaderCard
+              key={gymInfo.id}
+              gymInfo={gymInfo}
+              isDefeated={defeatedGymLeaders.has(gymInfo.id)}
+              onToggleDefeated={handleToggleGymLeaderDefeated}
+              onOpenModal={openGymLeaderModal}
+              currentLanguage={currentLanguage}
+            />
+          ))}
+        </div>
+      )}
+    </>
   );
 
+  const handleTypeToggle = (type: string) => {
+    setSelectedTypes(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 p-4 md:p-6 lg:p-8">
-      <header className="mb-6 sm:mb-8 pt-3 sm:pt-4 px-2">
-        {/* Main Header Flex Container: Handles mobile (column) and sm+ (row) layouts */}
-        <div className="flex flex-col items-center sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-          
-          {/* Language Switcher container: First in DOM for mobile order. order-3 for sm+ (right align) */}
-          <div className="w-full flex justify-end sm:w-auto sm:flex-shrink-0 sm:order-3 z-10">
-             <LanguageSwitcher currentLanguage={currentLanguage} onChangeLanguage={handleChangeLanguage} />
-          </div>
-
-          {/* Left Spacer: Hidden on mobile. order-1 for sm+ (left align) */}
-          <div className="hidden sm:block sm:w-20 md:w-24 lg:w-32 xl:w-40 flex-shrink-0 sm:order-1"></div> {/* Adjusted width to accommodate larger title */}
-
-          {/* Title group: order-2 for sm+ (center). Centered on mobile by parent's items-center. */}
-          <div className="text-center w-full sm:w-auto sm:flex-grow sm:order-2">
-            <div className="inline-flex items-center justify-center space-x-1 xs:space-x-2 sm:space-x-3">
-              <img 
-                src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" 
-                alt={t("Pokéball", currentLanguage)} 
-                className="w-8 h-8 xs:w-10 xs:h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 flex-shrink-0"
-              />
-              <h1 
-                className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-sky-400 tracking-tight truncate"
-              >
-                {t("Kalos Pokédex", currentLanguage)}
-              </h1>
-            </div>
-          </div>
-
+    <div className={`min-h-screen p-3 sm:p-5 pb-10`}>
+      <header className="mb-5 sm:mb-8 text-center relative">
+        <div className="absolute top-0 right-0 flex items-center space-x-2">
+           <ThemeSwitcher currentTheme={currentTheme} onToggleTheme={toggleTheme} currentLanguage={currentLanguage} />
+           <LanguageSwitcher currentLanguage={currentLanguage} onChangeLanguage={setCurrentLanguage} />
         </div>
-
-        {/* Subtitle - remains centered below the main bar */}
-        <div className="text-center">
-          {currentView === 'pokedex' && (
-              <p className="text-slate-400 mt-2 text-xs sm:text-sm md:text-lg">{t("Explore Pokémon from a curated list.", currentLanguage)}</p>
-          )}
-          {currentView === 'gymLeaders' && (
-              <p className="text-slate-400 mt-2 text-xs sm:text-sm md:text-lg">{t("Meet the Gym Leaders of the Kalos region.", currentLanguage)}</p>
-          )}
-        </div>
+        <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/items/poke-ball.png" alt="Pokéball" className="w-10 h-10 mx-auto mb-1 opacity-80" />
+        <h1 className="text-3xl sm:text-4xl font-bold themed-app-title">{t('Kalos Pokédex', currentLanguage)}</h1>
+        <p className="text-sm sm:text-base themed-app-subtitle mt-1">
+          {currentView === 'pokedex' ? t('Explore Pokémon from a curated list.', currentLanguage) : t('Meet the Gym Leaders of the Kalos region.', currentLanguage)}
+        </p>
       </header>
 
-      <nav className="flex justify-center space-x-3 sm:space-x-4 border-b border-slate-700 mb-6 sm:mb-8 pb-4 sm:pb-6">
+      <nav className="mb-4 sm:mb-6 flex justify-center space-x-2 sm:space-x-3 border-b-2 border-slate-200 dark:border-slate-700 pb-2.5 sm:pb-3">
         <button
           onClick={() => setCurrentView('pokedex')}
-          className={`px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm sm:text-base font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-75
-            ${currentView === 'pokedex' ? 'bg-sky-500 text-white shadow-lg transform scale-105' : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-sky-400 hover:shadow-md'}`}
-          aria-pressed={currentView === 'pokedex'}
+          className={`themed-nav-button px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md
+            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500
+            ${currentView === 'pokedex' 
+              ? 'themed-nav-button-active-pokedex' 
+              : 'themed-nav-button-inactive'
+            }`}
         >
-          {t("Pokédex", currentLanguage)}
+          {t('Pokédex', currentLanguage)}
         </button>
         <button
           onClick={() => setCurrentView('gymLeaders')}
-          className={`px-4 py-2 sm:px-6 sm:py-2.5 rounded-lg text-sm sm:text-base font-medium transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-75
-            ${currentView === 'gymLeaders' ? 'bg-yellow-500 text-white shadow-lg transform scale-105' : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-yellow-400 hover:shadow-md'}`}
-          aria-pressed={currentView === 'gymLeaders'}
+          className={`themed-nav-button px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-full shadow-md
+            focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500
+            ${currentView === 'gymLeaders' 
+              ? 'themed-nav-button-active-gym' 
+              : 'themed-nav-button-inactive'
+            }`}
         >
-          {t("Gym Leaders", currentLanguage)}
+          {t('Gym Leaders', currentLanguage)}
         </button>
       </nav>
 
-      <main>
-        {currentView === 'pokedex' && renderPokedexView()}
-        {currentView === 'gymLeaders' && renderGymLeadersView()}
+      <main className="max-w-7xl mx-auto">
+        {currentView === 'pokedex' ? renderPokedexView() : renderGymLeadersView()}
       </main>
 
+      <footer className="mt-8 sm:mt-12 pt-4 sm:pt-6 border-t border-slate-200 dark:border-slate-700 text-center text-xs themed-footer-text">
+        <p>{t('Pokédex data from', currentLanguage)} <a href="https://pokeapi.co/" target="_blank" rel="noopener noreferrer" className="themed-footer-link underline">{t('PokeAPI', currentLanguage)}</a>.</p>
+        <p className="mt-1">{t('This is a fan-made application. Pokémon and Pokémon character names are trademarks of Nintendo.', currentLanguage)}</p>
+      </footer>
+
+
       {isModalOpen && selectedPokemon && (
-        <PokemonModal pokemon={selectedPokemon} onClose={closeModal} currentLanguage={currentLanguage} />
+        <PokemonModal
+          pokemon={selectedPokemon}
+          onClose={closeModal}
+          currentLanguage={currentLanguage}
+          isCaptured={capturedPokemonIds.has(selectedPokemon.id)}
+        />
       )}
 
-      <footer className="text-center mt-12 sm:mt-16 py-6 sm:py-8 border-t border-slate-700">
-        <p className="text-slate-500 text-xs sm:text-sm">
-          {t("Pokédex data from", currentLanguage)} <a href="https://pokeapi.co/" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:text-sky-400">PokeAPI</a>.
-        </p>
-        <p className="text-slate-600 text-[0.65rem] sm:text-xs mt-1">
-          {t("This is a fan-made application. Pokémon and Pokémon character names are trademarks of Nintendo.", currentLanguage)}
-        </p>
-      </footer>
+      {isGymLeaderModalOpen && selectedGymLeaderInfo && (
+        <GymLeaderModal
+            gymInfo={selectedGymLeaderInfo}
+            isOpen={isGymLeaderModalOpen}
+            onClose={closeGymLeaderModal}
+            onPokemonClick={handleOpenPokemonModalFromTeam}
+            detailsCache={detailsCache}
+            currentLanguage={currentLanguage}
+        />
+      )}
     </div>
   );
 };

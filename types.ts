@@ -1,10 +1,18 @@
 
 export type SupportedLanguage = 'pt-BR' | 'en';
 
+export type Theme = 'light' | 'dark';
+
+export interface PokemonRouteInfo {
+  route: string;
+  probability: string;
+  location: string;
+}
+
 export interface BasePokemon {
   name: string; // English name from API, used as key
   id: number;
-  routes?: string[]; // e.g., "Rota 2", "Rota 3" (Kalos specific, kept in PT for this app)
+  routes?: PokemonRouteInfo[]; 
 }
 
 export interface PokemonSprites {
@@ -60,7 +68,7 @@ export interface PokemonDetail {
   abilities: PokemonAbility[];
   stats: PokemonStat[];
   species: NameUrlPair; 
-  routes?: string[]; // Portuguese route names from constants.ts
+  routes?: PokemonRouteInfo[];
 }
 
 export enum PokemonStatName {
@@ -75,14 +83,28 @@ export enum PokemonStatName {
 export const MAX_STAT_VALUE = 255;
 
 export interface GymLeaderInfo {
-  id: string; // unique identifier, e.g., "viola"
-  gym_leader_key: string; // translation key for leader's name
-  city_key: string; // translation key for city's name
-  specialty_key: string; // English type key, e.g., "bug"
-  specialty_display_key: string; // translation key for type, e.g., "type_bug"
-  badge_name_key: string; // translation key for badge name
-  badge_image: string;
+  id: string; 
+  gym_leader_key: string; 
+  city_key: string; 
+  specialty_key: string; 
+  specialty_display_key: string; 
+  badge_name_key: string; 
+  leader_image: string; 
+  tips_key: string; 
+  advantages: string[]; 
+  disadvantages: string[]; 
+  pokemon_ids: number[]; 
 }
+
+export interface GymLeaderModalProps {
+  gymInfo: GymLeaderInfo | null;
+  isOpen: boolean;
+  onClose: () => void;
+  onPokemonClick: (pokemonId: number) => void;
+  detailsCache: Map<number, PokemonDetail | null>;
+  currentLanguage: SupportedLanguage;
+}
+
 
 // --- Evolution Related Types ---
 
@@ -103,7 +125,7 @@ export interface Genus {
 
 export interface PokemonSpecies {
   id: number;
-  name: string; // English name from API
+  name: string; 
   evolution_chain: EvolutionChainReference;
   evolves_from_species: NameUrlPair | null;
   flavor_text_entries: FlavorTextEntry[];
@@ -111,7 +133,7 @@ export interface PokemonSpecies {
 }
 
 export interface PokemonSpeciesReference {
-    name: string; // English name from API
+    name: string; 
     url: string;
 }
 
@@ -131,7 +153,7 @@ export interface EvolutionDetailFromApi {
     party_species: NameUrlPair | null;
     party_type: NameUrlPair | null;
     relative_physical_stats: number | null;
-    time_of_day: string; // "day", "night", ""
+    time_of_day: string; 
     trade_species: NameUrlPair | null;
     turn_upside_down: boolean;
 }
@@ -149,9 +171,8 @@ export interface EvolutionChainResponse {
     chain: EvolutionChainLink;
 }
 
-// Types for processed evolution data for display
 export interface EvolutionStageInfo {
-    name: string; // Pokémon name, translated for display
+    name: string; 
     id: number;
     imageUrl: string;
 }
@@ -159,7 +180,7 @@ export interface EvolutionStageInfo {
 export interface EvolutionStep {
     from: EvolutionStageInfo;
     to: EvolutionStageInfo;
-    method: string; // Evolution method description, translated for display
+    method: string; 
 }
 
 export interface ProcessedEvolutionDisplayInfo {
@@ -168,7 +189,6 @@ export interface ProcessedEvolutionDisplayInfo {
     evolvesTo: EvolutionStep[];
 }
 
-// Translation mapping types
 export type TranslationMap = {
   [key: string]: string;
 };
@@ -178,7 +198,22 @@ export type AllTranslations = {
     types: TranslationMap;
     stats: TranslationMap;
     ui: TranslationMap;
-    pokemon_names?: TranslationMap; // Optional: if we need to override API names for display
-    gym_leader_details?: TranslationMap; // For leader names, cities, badges
+    pokemon_names?: TranslationMap; 
+    gym_leader_details?: TranslationMap; 
   };
 };
+
+export interface PokemonModalProps {
+  pokemon: PokemonDetail | null;
+  onClose: () => void;
+  currentLanguage: SupportedLanguage;
+  isCaptured: boolean; 
+}
+
+export interface PokemonTypeColorStyle {
+  background: string; 
+  text: string;       
+  border?: string;    
+  backgroundHex?: string; 
+  cardBackgroundHex?: string; 
+}

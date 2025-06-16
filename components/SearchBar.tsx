@@ -24,7 +24,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, initialTerm = '', curre
       placeholder={t('Search Pokémon by name or ID...', currentLanguage)}
       value={searchTerm}
       onChange={handleChange}
-      className="w-full px-4 py-2 text-sm bg-slate-800 text-slate-200 border-2 border-slate-700 rounded-full focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-colors placeholder-slate-500"
+      className="themed-input w-full px-4 py-2 text-sm rounded-full focus:ring-2 focus:ring-sky-500 dark:focus:ring-sky-400 focus:border-sky-500 dark:focus:border-sky-400 outline-none transition-colors"
       aria-label={t('Search Pokémon', currentLanguage)}
     />
   );

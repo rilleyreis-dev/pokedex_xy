@@ -1,40 +1,258 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pokédex de Kalos</title>
+  <script>
+    // Configure Tailwind CSS before loading the script
+    // This is crucial for dark mode 'class' strategy to work with CDN
+    tailwind.config = {
+      darkMode: 'class', 
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   
-  <!-- PWA Manifest -->
   <link rel="manifest" href="/public/manifest.json">
   
-  <!-- Theme Color for PWA -->
-  <meta name="theme-color" content="#0f172a"> 
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
   
-  <!-- Apple Touch Icon (optional, uses manifest icon if not specified) -->
   <link rel="apple-touch-icon" href="/public/icons/icon-192x192.png">
 
   <style>
-    /* Custom scrollbar for better aesthetics */
+    :root {
+      /* Base Palette (Light Theme) */
+      --color-black: #000000;
+      --color-white: #ffffff;
+      --color-slate-50: #f8fafc;
+      --color-slate-100: #f1f5f9;
+      --color-slate-200: #e2e8f0;
+      --color-slate-300: #cbd5e1;
+      --color-slate-400: #94a3b8;
+      --color-slate-500: #64748b;
+      --color-slate-600: #475569;
+      --color-slate-700: #334155;
+      --color-slate-800: #1e293b;
+      --color-slate-900: #0f172a;
+      --color-sky-400: #38bdf8;
+      --color-sky-500: #0ea5e9;
+      --color-sky-600: #0284c7;
+      --color-sky-700: #0369a1;
+      --color-yellow-400: #facc15;
+      --color-yellow-500: #eab308;
+      --color-yellow-600: #ca8a04;
+
+      /* Semantic Variables (Light Theme) */
+      --page-bg-color: var(--color-white);
+      --page-text-color: var(--color-slate-900);
+      --scrollbar-track-bg: var(--color-slate-200);
+      --scrollbar-thumb-bg: var(--color-slate-400);
+      --scrollbar-thumb-hover-bg: var(--color-slate-500);
+
+      --app-title-color: var(--color-black);
+      --app-subtitle-color: var(--color-slate-600);
+      
+      --nav-button-inactive-bg: var(--color-slate-50);
+      --nav-button-inactive-text: var(--color-slate-700);
+      --nav-button-inactive-border: var(--color-slate-300);
+      --nav-button-inactive-hover-bg: var(--color-slate-100);
+      --nav-button-inactive-hover-text: var(--color-slate-800);
+
+      --nav-button-active-pokedex-bg: var(--color-sky-500);
+      --nav-button-active-pokedex-text: var(--color-white);
+      --nav-button-active-pokedex-hover-bg: var(--color-sky-400);
+      
+      --nav-button-active-gym-bg: var(--color-yellow-500);
+      --nav-button-active-gym-text: var(--color-white);
+      --nav-button-active-gym-hover-bg: var(--color-yellow-400);
+
+      --input-bg: var(--color-white);
+      --input-text: var(--color-slate-800);
+      --input-border: var(--color-slate-300);
+      --input-placeholder-text: var(--color-slate-500);
+      
+      --select-arrow-color: var(--color-slate-500);
+
+      --footer-text-color: var(--color-slate-500);
+      --footer-link-color: var(--color-sky-600);
+      --footer-link-hover-color: var(--color-sky-500);
+    }
+
+    html.dark {
+      /* Semantic Variables (Dark Theme) */
+      --page-bg-color: var(--color-slate-900);
+      --page-text-color: var(--color-slate-50);
+      --scrollbar-track-bg: var(--color-slate-800);
+      --scrollbar-thumb-bg: var(--color-slate-600);
+      --scrollbar-thumb-hover-bg: var(--color-slate-700);
+
+      --app-title-color: var(--color-sky-400);
+      --app-subtitle-color: var(--color-slate-400);
+      
+      --nav-button-inactive-bg: var(--color-slate-700);
+      --nav-button-inactive-text: var(--color-slate-300);
+      --nav-button-inactive-border: var(--color-slate-600);
+      --nav-button-inactive-hover-bg: var(--color-slate-600);
+      --nav-button-inactive-hover-text: var(--color-slate-200);
+
+      --nav-button-active-pokedex-bg: var(--color-sky-600);
+      --nav-button-active-pokedex-text: var(--color-white);
+      --nav-button-active-pokedex-hover-bg: var(--color-sky-500);
+
+      --nav-button-active-gym-bg: var(--color-yellow-600);
+      --nav-button-active-gym-text: var(--color-white);
+      --nav-button-active-gym-hover-bg: var(--color-yellow-500);
+      
+      --input-bg: var(--color-slate-800);
+      --input-text: var(--color-slate-200);
+      --input-border: var(--color-slate-700);
+      --input-placeholder-text: var(--color-slate-500);
+      
+      --select-arrow-color: var(--color-slate-400);
+
+      --footer-text-color: var(--color-slate-400);
+      --footer-link-color: var(--color-sky-500);
+      --footer-link-hover-color: var(--color-sky-400);
+    }
+
+    /* Global Styles */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--page-bg-color);
+      color: var(--page-text-color);
+      transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+    }
     ::-webkit-scrollbar {
       width: 8px;
+      height: 8px;
     }
     ::-webkit-scrollbar-track {
-      background: #2d3748; /* dark-700 */
+      background: var(--scrollbar-track-bg);
     }
     ::-webkit-scrollbar-thumb {
-      background: #4a5568; /* dark-600 */
+      background: var(--scrollbar-thumb-bg);
       border-radius: 4px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #718096; /* dark-500 */
+      background: var(--scrollbar-thumb-hover-bg);
     }
-    body {
-      font-family: 'Inter', sans-serif; /* A nice sans-serif font */
+
+    /* Custom Themed Classes */
+    .themed-app-title {
+      color: var(--app-title-color);
     }
+    .themed-app-subtitle {
+      color: var(--app-subtitle-color);
+    }
+
+    .themed-nav-button {
+      transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    }
+    .themed-nav-button-inactive {
+      background-color: var(--nav-button-inactive-bg);
+      color: var(--nav-button-inactive-text);
+      border: 1px solid var(--nav-button-inactive-border);
+    }
+    .themed-nav-button-inactive:hover {
+      background-color: var(--nav-button-inactive-hover-bg);
+      color: var(--nav-button-inactive-hover-text);
+    }
+    .themed-nav-button-active-pokedex {
+      background-color: var(--nav-button-active-pokedex-bg);
+      color: var(--nav-button-active-pokedex-text);
+    }
+    .themed-nav-button-active-pokedex:hover {
+      background-color: var(--nav-button-active-pokedex-hover-bg);
+    }
+    .themed-nav-button-active-gym {
+      background-color: var(--nav-button-active-gym-bg);
+      color: var(--nav-button-active-gym-text);
+    }
+    .themed-nav-button-active-gym:hover {
+      background-color: var(--nav-button-active-gym-hover-bg);
+    }
+    
+    .themed-type-filter-button-inactive {
+      background-color: var(--nav-button-inactive-bg); /* Reuse nav button styles */
+      color: var(--nav-button-inactive-text);
+      border: 1px solid var(--nav-button-inactive-border);
+    }
+    .themed-type-filter-button-inactive:hover {
+      background-color: var(--nav-button-inactive-hover-bg);
+      color: var(--nav-button-inactive-hover-text);
+    }
+    .themed-type-filter-button-active { /* Typically uses type-specific colors, but can have a base */
+      background-color: var(--color-sky-500); /* Default active, often overridden by specific type color in JS */
+      color: var(--color-white);
+    }
+    html.dark .themed-type-filter-button-active {
+        background-color: var(--color-sky-600);
+    }
+
+
+    .themed-input, .themed-select {
+      background-color: var(--input-bg);
+      color: var(--input-text);
+      border: 2px solid var(--input-border); /* Tailwind uses border-2, so match that */
+      transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    }
+    .themed-input::placeholder, .themed-select::placeholder {
+      color: var(--input-placeholder-text);
+      opacity: 1; /* Firefox fix */
+    }
+    .themed-select-arrow {
+      color: var(--select-arrow-color);
+    }
+    
+    .themed-footer-text {
+        color: var(--footer-text-color);
+    }
+    .themed-footer-link {
+        color: var(--footer-link-color);
+    }
+    .themed-footer-link:hover {
+        color: var(--footer-link-hover-color);
+    }
+
+    /* For Language and Theme switchers if they use similar styles to nav buttons */
+    .themed-control-button {
+      background-color: var(--input-bg); /* Similar to input bg */
+      color: var(--input-text);
+      border: 1px solid var(--input-border);
+    }
+    .themed-control-button:hover {
+      background-color: var(--nav-button-inactive-hover-bg); /* A bit lighter/different on hover */
+      border-color: var(--color-sky-500);
+    }
+    html.dark .themed-control-button:hover {
+       border-color: var(--color-sky-400);
+    }
+    .themed-control-button-icon {
+        color: var(--input-text); /* Icon color matches text */
+    }
+    .themed-dropdown-menu {
+      background-color: var(--input-bg); /* Use input-bg or a slightly adjusted one */
+      border: 1px solid var(--input-border);
+    }
+    .themed-dropdown-item-text {
+        color: var(--input-text);
+    }
+    .themed-dropdown-item-hover-bg:hover {
+        background-color: var(--color-sky-500);
+        color: var(--color-white);
+    }
+    html.dark .themed-dropdown-item-hover-bg:hover {
+        background-color: var(--color-sky-600);
+    }
+    .themed-dropdown-item-current-icon {
+        color: var(--color-sky-500);
+    }
+    html.dark .themed-dropdown-item-current-icon {
+        color: var(--color-sky-400);
+    }
+
   </style>
 <script type="importmap">
 {
@@ -48,7 +266,7 @@
 </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-<body class="bg-slate-900 text-slate-100">
+<body>
   <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
