@@ -15,6 +15,9 @@ import LanguageSwitcher from './components/LanguageSwitcher';
 
 type View = 'pokedex' | 'gymLeaders';
 
+const CAPTURED_POKEMON_STORAGE_KEY = 'kalosPokedexCapturedIds';
+const DEFEATED_GYM_LEADERS_STORAGE_KEY = 'kalosPokedexDefeatedGymLeaders';
+
 const getDefaultLanguage = (): SupportedLanguage => {
   const storedLang = localStorage.getItem('kalosPokedexLanguage') as SupportedLanguage | null;
   if (storedLang && (storedLang === 'en' || storedLang === 'pt-BR')) {
@@ -36,8 +39,15 @@ const App: React.FC = () => {
   const [detailsCache, setDetailsCache] = useState<Map<number, PokemonDetail | null>>(new Map());
   const [isInitialDataLoading, setIsInitialDataLoading] = useState<boolean>(true);
   const [currentView, setCurrentView] = useState<View>('pokedex');
-  const [capturedPokemonIds, setCapturedPokemonIds] = useState<Set<number>>(new Set());
-  const [defeatedGymLeaders, setDefeatedGymLeaders] = useState<Set<string>>(new Set()); 
+  
+  const [capturedPokemonIds, setCapturedPokemonIds] = useState<Set<number>>(() => {
+    const storedCaptured = localStorage.getItem(CAPTURED_POKEMON_STORAGE_KEY);
+    return storedCaptured ? new Set(JSON.parse(storedCaptured)) : new Set();
+  });
+  const [defeatedGymLeaders, setDefeatedGymLeaders] = useState<Set<string>>(() => {
+    const storedDefeated = localStorage.getItem(DEFEATED_GYM_LEADERS_STORAGE_KEY);
+    return storedDefeated ? new Set(JSON.parse(storedDefeated)) : new Set();
+  }); 
 
   const uniqueRoutes = useMemo(() => getUniqueRoutes(INITIAL_POKEMON_LIST), []);
 
@@ -81,6 +91,16 @@ const App: React.FC = () => {
 
     fetchAllDetails();
   }, []);
+
+  // Save captured Pokémon IDs to localStorage
+  useEffect(() => {
+    localStorage.setItem(CAPTURED_POKEMON_STORAGE_KEY, JSON.stringify(Array.from(capturedPokemonIds)));
+  }, [capturedPokemonIds]);
+
+  // Save defeated Gym Leader IDs to localStorage
+  useEffect(() => {
+    localStorage.setItem(DEFEATED_GYM_LEADERS_STORAGE_KEY, JSON.stringify(Array.from(defeatedGymLeaders)));
+  }, [defeatedGymLeaders]);
 
 
   const handleToggleCaptured = useCallback((pokemonId: number, event: React.MouseEvent) => {
@@ -205,7 +225,6 @@ const App: React.FC = () => {
   
   const handleChangeLanguage = (lang: SupportedLanguage) => {
     setCurrentLanguage(lang);
-    // No longer need to reset gymLeaderStrategies as it's removed
   };
 
 
