@@ -546,24 +546,24 @@ export const INITIAL_POKEMON_LIST: BasePokemon[] = [
 
 
 export const POKEMON_TYPE_COLORS: { [key: string]: PokemonTypeColorStyle } = {
-  normal:   { background: 'bg-gray-400',   text: 'text-slate-700', border: 'border-gray-500', backgroundHex: '#CACBAB', cardBackgroundHex: '#A7A877' },
-  fire:     { background: 'bg-red-500',     text: 'text-red-700',  border: 'border-red-600',   backgroundHex: '#FFADAD' },
-  water:    { background: 'bg-blue-500',    text: 'text-blue-700', border: 'border-blue-600',  backgroundHex: '#A0C4FF' },
-  electric: { background: 'bg-yellow-400',  text: 'text-yellow-700',border: 'border-yellow-500',backgroundHex: '#FDFFB6' },
-  grass:    { background: 'bg-green-500',   text: 'text-green-700',border: 'border-green-600', backgroundHex: '#CAFFBF' },
-  ice:      { background: 'bg-sky-300',     text: 'text-sky-700',  border: 'border-sky-400',   backgroundHex: '#BDE0FE' },
-  fighting: { background: 'bg-orange-700',  text: 'text-orange-800',border: 'border-orange-800',backgroundHex: '#FFD6A5' },
-  poison:   { background: 'bg-purple-500',  text: 'text-purple-700',border: 'border-purple-600',backgroundHex: '#CDB4DB' },
-  ground:   { background: 'bg-yellow-600',  text: 'text-yellow-800',border: 'border-yellow-700',backgroundHex: '#E6CCB2' },
-  flying:   { background: 'bg-indigo-300',  text: 'text-indigo-700',border: 'border-indigo-400',backgroundHex: '#BDB2FF' },
-  psychic:  { background: 'bg-pink-500',    text: 'text-pink-700', border: 'border-pink-600',  backgroundHex: '#FFC8DD' },
-  bug:      { background: 'bg-lime-500',    text: 'text-lime-700', border: 'border-lime-600',  backgroundHex: '#D1FFBD' },
-  rock:     { background: 'bg-yellow-700',  text: 'text-yellow-900',border: 'border-yellow-800',backgroundHex: '#D6CCC2' },
-  ghost:    { background: 'bg-purple-700',  text: 'text-purple-700',border: 'border-purple-800',backgroundHex: '#D8BFD8' },
-  dragon:   { background: 'bg-indigo-700',  text: 'text-indigo-700',border: 'border-indigo-800',backgroundHex: '#A2D2FF' },
-  dark:     { background: 'bg-gray-700',    text: 'text-slate-100', border: 'border-gray-800',  backgroundHex: '#B0A8A0' },
-  steel:    { background: 'bg-slate-500',   text: 'text-slate-600',border: 'border-slate-600', backgroundHex: '#D9D9D9' },
-  fairy:    { background: 'bg-pink-300',    text: 'text-pink-600', border: 'border-pink-400',  backgroundHex: '#FFDAF5' }
+  normal:   { background: 'bg-gray-400',   text: 'text-neutral-700', border: 'border-gray-500', backgroundHex: '#CACBAB', cardBackgroundHex: '#A7A877', saturatedColorHex: '#9CA3AF' },
+  fire:     { background: 'bg-red-500',     text: 'text-red-700',  border: 'border-red-600',   backgroundHex: '#FFADAD', cardBackgroundHex: '#FF8A8A', saturatedColorHex: '#EF4444'},
+  water:    { background: 'bg-blue-500',    text: 'text-blue-700', border: 'border-blue-600',  backgroundHex: '#A0C4FF', cardBackgroundHex: '#8CB5F9', saturatedColorHex: '#3B82F6'},
+  electric: { background: 'bg-yellow-400',  text: 'text-yellow-700',border: 'border-yellow-500',backgroundHex: '#FDFFB6', cardBackgroundHex: '#FAFFAC', saturatedColorHex: '#FACC15'},
+  grass:    { background: 'bg-green-500',   text: 'text-green-700',border: 'border-green-600', backgroundHex: '#CAFFBF', cardBackgroundHex: '#B8FFA7', saturatedColorHex: '#22C55E'},
+  ice:      { background: 'bg-sky-300',     text: 'text-sky-700',  border: 'border-sky-400',   backgroundHex: '#BDE0FE', cardBackgroundHex: '#A9D3FD', saturatedColorHex: '#7DD3FC'},
+  fighting: { background: 'bg-orange-500',  text: 'text-orange-700',border: 'border-orange-600',backgroundHex: '#FFD6A5', cardBackgroundHex: '#FFC88D', saturatedColorHex: '#F97316'},
+  poison:   { background: 'bg-purple-500',  text: 'text-purple-700',border: 'border-purple-600',backgroundHex: '#CDB4DB', cardBackgroundHex: '#C0A2D0', saturatedColorHex: '#A855F7'},
+  ground:   { background: 'bg-yellow-600',  text: 'text-yellow-800',border: 'border-yellow-700',backgroundHex: '#E6CCB2', cardBackgroundHex: '#DDC0A0', saturatedColorHex: '#EAB308'},
+  flying:   { background: 'bg-indigo-400',  text: 'text-indigo-700',border: 'border-indigo-500',backgroundHex: '#BDB2FF', cardBackgroundHex: '#ADA0FF', saturatedColorHex: '#818CF8'},
+  psychic:  { background: 'bg-pink-500',    text: 'text-pink-700', border: 'border-pink-600',  backgroundHex: '#FFC8DD', cardBackgroundHex: '#FFB6D0', saturatedColorHex: '#EC4899'},
+  bug:      { background: 'bg-lime-500',    text: 'text-lime-700', border: 'border-lime-600',  backgroundHex: '#D1FFBD', cardBackgroundHex: '#C0FFA9', saturatedColorHex: '#84CC16'},
+  rock:     { background: 'bg-stone-500',   text: 'text-stone-700',border: 'border-stone-600', backgroundHex: '#D6CCC2', cardBackgroundHex: '#C9BEB6', saturatedColorHex: '#78716C'},
+  ghost:    { background: 'bg-purple-600',  text: 'text-purple-700',border: 'border-purple-700',backgroundHex: '#D8BFD8', cardBackgroundHex: '#CAACCB', saturatedColorHex: '#9333EA'},
+  dragon:   { background: 'bg-indigo-600',  text: 'text-indigo-700',border: 'border-indigo-700',backgroundHex: '#A2D2FF', cardBackgroundHex: '#8DC6FF', saturatedColorHex: '#4F46E5'},
+  dark:     { background: 'bg-gray-700',    text: 'text-neutral-700', border: 'border-gray-800',  backgroundHex: '#B0A8A0', cardBackgroundHex: '#A29A92', saturatedColorHex: '#374151'},
+  steel:    { background: 'bg-slate-500',   text: 'text-slate-700',border: 'border-slate-600', backgroundHex: '#D9D9D9', cardBackgroundHex: '#CCCCCC', saturatedColorHex: '#64748B'},
+  fairy:    { background: 'bg-pink-400',    text: 'text-pink-700', border: 'border-pink-500',  backgroundHex: '#FFDAF5', cardBackgroundHex: '#FFC7ED', saturatedColorHex: '#F472B6'}
 };
 
 

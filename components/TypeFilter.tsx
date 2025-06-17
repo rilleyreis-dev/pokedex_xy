@@ -2,7 +2,7 @@
 import React from 'react';
 import { getTranslatedType, t } from '../translations';
 import { SupportedLanguage } from '../types';
-import { POKEMON_TYPE_COLORS } from '../constants'; // Import to get specific active colors
+import { POKEMON_TYPE_COLORS } from '../constants';
 
 interface TypeFilterProps {
   allTypes: string[]; 
@@ -23,37 +23,44 @@ const TypeFilter: React.FC<TypeFilterProps> = ({ allTypes, selectedTypes, onType
         {allTypes.map(type => { 
           const isActive = selectedTypes.includes(type);
           const translatedTypeName = getTranslatedType(type, currentLanguage);
+          const typeColors = POKEMON_TYPE_COLORS[type.toLowerCase()] || POKEMON_TYPE_COLORS['normal'];
           
-          let activeClass = 'themed-type-filter-button-active shadow-md'; // Base active class from CSS
-          let activeStyle: React.CSSProperties = {};
+          const buttonStyle: React.CSSProperties = {};
+          let buttonClasses: string[] = [
+            'px-3', 'py-1.5', 'text-xs', 'rounded-full', 'font-medium',
+            'transition-all', 'duration-200', 'ease-in-out',
+            'flex-shrink-0', 'focus:outline-none', 'focus:ring-2',
+            'focus:ring-offset-2', 'focus:ring-offset-[var(--page-bg-color)]', // Theme-aware offset
+            'focus:ring-sky-500', 'dark:focus:ring-sky-400',
+            'border-2' // Base border for all
+          ];
+
+          // Apply the consistent text color
+          buttonClasses.push(typeColors.text || POKEMON_TYPE_COLORS['normal'].text);
+          buttonStyle.borderColor = typeColors.backgroundHex || POKEMON_TYPE_COLORS['normal'].backgroundHex;
 
           if (isActive) {
-            const typeColors = POKEMON_TYPE_COLORS[type.toLowerCase()] || POKEMON_TYPE_COLORS['normal'];
-            if (typeColors.backgroundHex) {
-              activeStyle = { backgroundColor: typeColors.backgroundHex, color: typeColors.text === 'text-slate-100' || typeColors.text === 'text-white' ? 'white' : 'black' }; // Simplified text color logic for hex
-              activeClass = `shadow-md`; // Remove themed-type-filter-button-active if hex is used
-            } else if (typeColors.background) {
-               // If no hex, Tailwind classes from POKEMON_TYPE_COLORS will be used directly.
-               // We need to ensure the text color contrasts.
-               activeClass = `${typeColors.background} ${typeColors.text} shadow-md`;
-            }
+            buttonStyle.backgroundColor = typeColors.backgroundHex || POKEMON_TYPE_COLORS['normal'].backgroundHex;
+            // Border color is already set and matches background for a filled look
+            buttonClasses.push('shadow-md');
+          } else {
+            // Unselected (hollow)
+            buttonStyle.backgroundColor = 'transparent';
+            // Border color and text color are already set
+            
+            // Hover effect for unselected: fill on hover
+            const hoverBgClass = `hover:bg-[${typeColors.backgroundHex || POKEMON_TYPE_COLORS['normal'].backgroundHex}]`;
+            // Text color class is already applied, so it remains correct on hover when background fills.
+            buttonClasses.push(hoverBgClass);
           }
-
 
           return (
             <button
               key={type}
               onClick={() => onTypeToggle(type)}
               type="button"
-              style={isActive && activeStyle.backgroundColor ? activeStyle : {}}
-              className={`
-                px-3 py-1.5 text-xs rounded-full font-medium transition-colors duration-200 flex-shrink-0
-                focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500
-                ${isActive 
-                  ? activeClass
-                  : 'themed-type-filter-button-inactive'
-                }
-              `}
+              style={buttonStyle}
+              className={buttonClasses.join(' ')}
               aria-pressed={isActive}
               aria-label={translatedTypeName}
             >
