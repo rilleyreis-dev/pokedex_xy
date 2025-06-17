@@ -96,10 +96,12 @@ export interface GymLeaderInfo {
   pokemon_ids: number[]; 
 }
 
-export interface GymLeaderModalProps {
-  gymInfo: GymLeaderInfo | null;
-  isOpen: boolean;
-  onClose: () => void;
+// Props for the new GymLeaderDetailView
+export interface GymLeaderDetailViewProps {
+  gymInfo: GymLeaderInfo;
+  isDefeated: boolean;
+  onToggleDefeated: (gymLeaderId: string) => void;
+  onBack: () => void;
   onPokemonClick: (pokemonId: number) => void;
   detailsCache: Map<number, PokemonDetail | null>;
   currentLanguage: SupportedLanguage;
@@ -130,6 +132,8 @@ export interface PokemonSpecies {
   evolves_from_species: NameUrlPair | null;
   flavor_text_entries: FlavorTextEntry[];
   genera: Genus[];
+  gender_rate: number; // -1 for genderless, 0-8 for female proportion in eighths
+  egg_groups: NameUrlPair[];
 }
 
 export interface PokemonSpeciesReference {
@@ -172,7 +176,7 @@ export interface EvolutionChainResponse {
 }
 
 export interface EvolutionStageInfo {
-    name: string; 
+    name:string; 
     id: number;
     imageUrl: string;
 }
@@ -203,6 +207,8 @@ export type AllTranslations = {
   };
 };
 
+// This modal might still be used for Gym Leader's Pokémon, or be replaced entirely.
+// For now, keeping it but its role for main Pokémon details is superseded by PokemonDetailView.
 export interface PokemonModalProps {
   pokemon: PokemonDetail | null;
   onClose: () => void;
@@ -216,4 +222,26 @@ export interface PokemonTypeColorStyle {
   border?: string;    
   backgroundHex?: string; 
   cardBackgroundHex?: string; 
+  saturatedColorHex?: string; // Added to support more vibrant background for detail view
+}
+
+export interface BreedingInfo {
+  gender: {
+    male_percent: number | null;
+    female_percent: number | null;
+    genderless: boolean;
+  };
+  egg_groups: string[];
+  egg_cycle?: string; // This is hard to get reliably from PokeAPI for all.
+}
+
+export interface PokemonDetailViewProps {
+  pokemonDetail: PokemonDetail;
+  pokemonSpecies: PokemonSpecies | null;
+  evolutionChain: EvolutionChainResponse | null;
+  isCaptured: boolean;
+  onToggleCaptured: (pokemonId: number, event?: React.MouseEvent) => void;
+  onBack: () => void;
+  currentLanguage: SupportedLanguage;
+  detailsCache: Map<number, PokemonDetail | null>; // For evolution images
 }

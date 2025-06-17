@@ -1,17 +1,28 @@
 
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { INITIAL_POKEMON_LIST, getUniqueRoutes, STANDARD_POKEMON_TYPES, KALOS_GYM_LEADERS } from './constants';
-import { BasePokemon, PokemonDetail, GymLeaderInfo, SupportedLanguage, Theme, PokemonModalProps, GymLeaderModalProps } from './types';
-import { getPokemonDetailsById } from './services/pokemonService';
-import { t, getTranslatedPokemonName } from './translations';
+import { 
+    INITIAL_POKEMON_LIST, getUniqueRoutes, STANDARD_POKEMON_TYPES, KALOS_GYM_LEADERS,
+    POKEMON_TYPE_COLORS, extractIdFromUrl, SPRITE_URL, formatEvolutionTrigger, capitalizeForDisplay
+} from './constants';
+import { 
+    BasePokemon, PokemonDetail, GymLeaderInfo, SupportedLanguage, Theme, 
+    PokemonModalProps, PokemonSpecies, EvolutionChainResponse,
+    EvolutionChainLink, ProcessedEvolutionDisplayInfo, EvolutionStageInfo, EvolutionStep, EvolutionDetailFromApi,
+    GymLeaderDetailViewProps
+} from './types';
+import { getPokemonDetailsById, getPokemonSpeciesByUrl, getEvolutionChainByUrl } from './services/pokemonService';
+import { t, getTranslatedPokemonName, getTranslatedType, getTranslatedStat } from './translations';
 import PokemonCard from './components/PokemonCard';
-import PokemonModal from './components/PokemonModal';
+import PokemonModal from './components/PokemonModal'; 
+import PokemonDetailView from './components/PokemonDetailView'; 
+import GymLeaderDetailView from './components/GymLeaderDetailView'; // New Gym Leader Detail View
 import SearchBar from './components/SearchBar';
 import RouteFilter from './components/RouteFilter';
 import TypeFilter from './components/TypeFilter';
 import LoadingSpinner from './components/LoadingSpinner';
 import GymLeaderCard from './components/GymLeaderCard';
-import GymLeaderModal from './components/GymLeaderModal';
+// GymLeaderModal component is now replaced by GymLeaderDetailView
+// import GymLeaderModal from './components/GymLeaderModal'; 
 import LanguageSwitcher from './components/LanguageSwitcher';
 import ThemeSwitcher from './components/ThemeSwitcher';
 
@@ -47,10 +58,21 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedRoute, setSelectedRoute] = useState<string>('');
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [selectedPokemon, setSelectedPokemon] = useState<PokemonDetail | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  
+  const [detailedPokemonId, setDetailedPokemonId] = useState<number | null>(null);
+  const [detailedPokemonSpecies, setDetailedPokemonSpecies] = useState<PokemonSpecies | null>(null);
+  const [detailedPokemonEvolutionChain, setDetailedPokemonEvolutionChain] = useState<EvolutionChainResponse | null>(null);
+  const [isDetailViewDataLoading, setIsDetailViewDataLoading] = useState<boolean>(false);
+
+  const [detailedGymLeaderId, setDetailedGymLeaderId] = useState<string | null>(null); // For new GymLeaderDetailView
+
+  const [selectedPokemonForModal, setSelectedPokemonForModal] = useState<PokemonDetail | null>(null); // For old modal (e.g. from Gym Team)
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false); // For old modal
   
   const [detailsCache, setDetailsCache] = useState<Map<number, PokemonDetail | null>>(new Map());
+  const [speciesCache, setSpeciesCache] = useState<Map<string, PokemonSpecies | null>>(new Map());
+  const [evolutionChainCache, setEvolutionChainCache] = useState<Map<string, EvolutionChainResponse | null>>(new Map());
+
   const [isInitialDataLoading, setIsInitialDataLoading] = useState<boolean>(true);
   const [currentView, setCurrentView] = useState<View>('pokedex');
   
@@ -62,9 +84,6 @@ const App: React.FC = () => {
     const storedDefeated = localStorage.getItem(DEFEATED_GYM_LEADERS_STORAGE_KEY);
     return storedDefeated ? new Set(JSON.parse(storedDefeated)) : new Set();
   }); 
-
-  const [selectedGymLeaderInfo, setSelectedGymLeaderInfo] = useState<GymLeaderInfo | null>(null);
-  const [isGymLeaderModalOpen, setIsGymLeaderModalOpen] = useState<boolean>(false);
 
   const uniqueRoutes = useMemo(() => getUniqueRoutes(INITIAL_POKEMON_LIST), []);
 
@@ -111,8 +130,10 @@ const App: React.FC = () => {
         await Promise.allSettled(
           batchIds.map(async (id) => {
             try {
-              const details = await getPokemonDetailsById(id);
-              newCache.set(id, details);
+              if (!detailsCache.has(id)) { 
+                const details = await getPokemonDetailsById(id);
+                newCache.set(id, details);
+              }
             } catch (error) {
               const pokemonFromInitialList = INITIAL_POKEMON_LIST.find(p => p.id === id);
               const nameForError = pokemonFromInitialList ? pokemonFromInitialList.name : `ID ${id}`;
@@ -131,7 +152,7 @@ const App: React.FC = () => {
     };
 
     fetchAllDetails();
-  }, []);
+  }, []); 
 
   useEffect(() => {
     localStorage.setItem(CAPTURED_POKEMON_STORAGE_KEY, JSON.stringify(Array.from(capturedPokemonIds)));
@@ -145,8 +166,8 @@ const App: React.FC = () => {
     setCurrentTheme(prevTheme => (prevTheme === 'light' ? 'dark' : 'light'));
   };
 
-  const handleToggleCaptured = useCallback((pokemonId: number, event: React.MouseEvent) => {
-    event.stopPropagation(); 
+  const handleToggleCaptured = useCallback((pokemonId: number, event?: React.MouseEvent) => {
+    event?.stopPropagation(); 
     setCapturedPokemonIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(pokemonId)) {
@@ -158,8 +179,7 @@ const App: React.FC = () => {
     });
   }, []);
 
-  const handleToggleGymLeaderDefeated = useCallback((gymLeaderId: string, event: React.MouseEvent) => { 
-    event.stopPropagation();
+  const handleToggleGymLeaderDefeated = useCallback((gymLeaderId: string) => { 
     setDefeatedGymLeaders(prev => {
       const newSet = new Set(prev);
       if (newSet.has(gymLeaderId)) {
@@ -171,39 +191,74 @@ const App: React.FC = () => {
     });
   }, []);
 
-  const handleCardClick = (pokemon: PokemonDetail) => {
-    setSelectedPokemon(pokemon);
-    setIsModalOpen(true);
+  const handleCardClickForDetailView = async (pokemonId: number) => {
+    setDetailedPokemonId(pokemonId);
+    setIsDetailViewDataLoading(true);
+    setDetailedPokemonSpecies(null);
+    setDetailedPokemonEvolutionChain(null);
+
+    const pokemonDetail = detailsCache.get(pokemonId);
+    if (pokemonDetail && pokemonDetail.species?.url) {
+      try {
+        let speciesData = speciesCache.get(pokemonDetail.species.url);
+        if (!speciesData) {
+          speciesData = await getPokemonSpeciesByUrl(pokemonDetail.species.url);
+          if(speciesData) setSpeciesCache(prev => new Map(prev).set(pokemonDetail.species.url, speciesData!));
+        }
+        setDetailedPokemonSpecies(speciesData);
+
+        if (speciesData?.evolution_chain?.url) {
+          let evolutionData = evolutionChainCache.get(speciesData.evolution_chain.url);
+          if(!evolutionData) {
+            evolutionData = await getEvolutionChainByUrl(speciesData.evolution_chain.url);
+            if(evolutionData) setEvolutionChainCache(prev => new Map(prev).set(speciesData!.evolution_chain.url, evolutionData!));
+          }
+          setDetailedPokemonEvolutionChain(evolutionData);
+        }
+      } catch (error) {
+        console.error("Error fetching species/evolution data for detail view:", error);
+      }
+    }
+    setIsDetailViewDataLoading(false);
   };
 
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setSelectedPokemon(null);
+  const closeDetailView = () => {
+    setDetailedPokemonId(null);
+    setDetailedPokemonSpecies(null);
+    setDetailedPokemonEvolutionChain(null);
   };
 
-  const openGymLeaderModal = (gymInfo: GymLeaderInfo) => {
-    setSelectedGymLeaderInfo(gymInfo);
-    setIsGymLeaderModalOpen(true);
+  const handleGymLeaderCardClick = (gymLeaderId: string) => {
+    setDetailedGymLeaderId(gymLeaderId);
   };
 
-  const closeGymLeaderModal = () => {
-    setIsGymLeaderModalOpen(false);
-    setSelectedGymLeaderInfo(null);
+  const closeGymLeaderDetailView = () => {
+    setDetailedGymLeaderId(null);
+  };
+  
+  const handlePokemonClickFromGymTeam = (pokemonId: number) => {
+    closeGymLeaderDetailView(); // Close current gym leader view
+    handleCardClickForDetailView(pokemonId); // Open Pokémon detail view
   };
 
-  const handleOpenPokemonModalFromTeam = (pokemonId: number) => {
+  // For old modal (if still needed for any specific case, e.g. quick view from somewhere else)
+   const handleOpenOldPokemonModal = (pokemonId: number) => {
     const pokemonDetail = detailsCache.get(pokemonId);
     if (pokemonDetail) {
-      closeGymLeaderModal(); 
       const basePokemonInfo = INITIAL_POKEMON_LIST.find(p => p.id === pokemonId);
       const detailWithRoutes = {
         ...pokemonDetail,
         routes: basePokemonInfo?.routes || [],
       };
-      handleCardClick(detailWithRoutes);
+      setSelectedPokemonForModal(detailWithRoutes);
+      setIsModalOpen(true);
     } else {
         console.warn(`Details for Pokémon ID ${pokemonId} not found in cache. Cannot open modal.`);
     }
+  };
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedPokemonForModal(null);
   };
 
   const filteredPokemon = useMemo(() => {
@@ -226,7 +281,7 @@ const App: React.FC = () => {
     });
   }, [searchTerm, selectedRoute, selectedTypes, detailsCache, currentLanguage]);
 
-  const spinnerColor = currentTheme === 'dark' ? 'text-sky-400' : 'text-sky-600'; // This can remain as Tailwind classes since it's dynamic
+  const spinnerColor = currentTheme === 'dark' ? 'text-sky-400' : 'text-sky-600';
 
   const renderPokedexView = () => (
     <>
@@ -263,10 +318,7 @@ const App: React.FC = () => {
             <PokemonCard
               key={pokemon.id}
               basePokemon={pokemon}
-              onCardClick={(details) => {
-                const baseInfo = INITIAL_POKEMON_LIST.find(p => p.id === details.id);
-                handleCardClick({ ...details, routes: baseInfo?.routes || [] });
-              }}
+              onCardClick={handleCardClickForDetailView} 
               initialDetails={detailsCache.get(pokemon.id)}
               isCaptured={capturedPokemonIds.has(pokemon.id)}
               onToggleCaptured={handleToggleCaptured}
@@ -280,7 +332,7 @@ const App: React.FC = () => {
 
   const renderGymLeadersView = () => (
     <>
-      {isInitialDataLoading && KALOS_GYM_LEADERS.length > 0 && (
+      {isInitialDataLoading && KALOS_GYM_LEADERS.length > 0 && ( 
           <div className="text-center py-10">
               <LoadingSpinner size="lg" color={spinnerColor} />
               <p className={`mt-4 themed-app-subtitle`}>{t('Loading Gym Leader data...', currentLanguage)}</p>
@@ -293,8 +345,8 @@ const App: React.FC = () => {
               key={gymInfo.id}
               gymInfo={gymInfo}
               isDefeated={defeatedGymLeaders.has(gymInfo.id)}
-              onToggleDefeated={handleToggleGymLeaderDefeated}
-              onOpenModal={openGymLeaderModal}
+              onToggleDefeated={(id, event) => { event.stopPropagation(); handleToggleGymLeaderDefeated(id);}} // Keep event for card, but detail view won't need it
+              onOpenModal={() => handleGymLeaderCardClick(gymInfo.id)} // Changed to new handler
               currentLanguage={currentLanguage}
             />
           ))}
@@ -308,6 +360,63 @@ const App: React.FC = () => {
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
     );
   };
+
+  const currentPokemonForDetail = detailedPokemonId ? detailsCache.get(detailedPokemonId) : null;
+  if (detailedPokemonId && currentPokemonForDetail) {
+    return (
+      <PokemonDetailView
+        pokemonDetail={currentPokemonForDetail}
+        pokemonSpecies={detailedPokemonSpecies}
+        evolutionChain={detailedPokemonEvolutionChain}
+        isCaptured={capturedPokemonIds.has(detailedPokemonId)}
+        onToggleCaptured={handleToggleCaptured}
+        onBack={closeDetailView}
+        currentLanguage={currentLanguage}
+        detailsCache={detailsCache}
+      />
+    );
+  }
+
+  const currentGymLeaderForDetail = detailedGymLeaderId ? KALOS_GYM_LEADERS.find(gl => gl.id === detailedGymLeaderId) : null;
+  if (detailedGymLeaderId && currentGymLeaderForDetail) {
+    return (
+        <GymLeaderDetailView
+            gymInfo={currentGymLeaderForDetail}
+            isDefeated={defeatedGymLeaders.has(detailedGymLeaderId)}
+            onToggleDefeated={handleToggleGymLeaderDefeated}
+            onBack={closeGymLeaderDetailView}
+            onPokemonClick={handlePokemonClickFromGymTeam}
+            detailsCache={detailsCache}
+            currentLanguage={currentLanguage}
+        />
+    );
+  }
+  
+  // Handling loading/error for detail views
+  if ((detailedPokemonId && (!currentPokemonForDetail && !isInitialDataLoading && !isDetailViewDataLoading)) ||
+      (detailedGymLeaderId && (!currentGymLeaderForDetail && !isInitialDataLoading))) {
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 themed-app-subtitle">
+            <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/201-question.png" alt="Not found" className="w-32 h-32 opacity-50 mb-4" />
+            <p className="text-xl mb-2">{t("Could not load details.", currentLanguage)}</p> {/* Generic error */}
+            <button
+                onClick={() => { closeDetailView(); closeGymLeaderDetailView(); }}
+                className="themed-nav-button themed-nav-button-inactive px-4 py-2 rounded-md shadow-md"
+            >
+                {t("Go back", currentLanguage)}
+            </button>
+        </div>
+    );
+  }
+   if ((detailedPokemonId && (isInitialDataLoading || isDetailViewDataLoading)) || (detailedGymLeaderId && isInitialDataLoading)) {
+    return (
+        <div className="min-h-screen flex flex-col items-center justify-center">
+            <LoadingSpinner size="lg" color={spinnerColor} />
+            <p className={`mt-4 themed-app-subtitle`}>{t('Loading details...', currentLanguage)}</p> {/* Generic loading */}
+        </div>
+    );
+  }
+
 
   return (
     <div className={`min-h-screen p-3 sm:p-5 pb-10`}>
@@ -357,24 +466,12 @@ const App: React.FC = () => {
         <p className="mt-1">{t('This is a fan-made application. Pokémon and Pokémon character names are trademarks of Nintendo.', currentLanguage)}</p>
       </footer>
 
-
-      {isModalOpen && selectedPokemon && (
+      {isModalOpen && selectedPokemonForModal && (
         <PokemonModal
-          pokemon={selectedPokemon}
+          pokemon={selectedPokemonForModal}
           onClose={closeModal}
           currentLanguage={currentLanguage}
-          isCaptured={capturedPokemonIds.has(selectedPokemon.id)}
-        />
-      )}
-
-      {isGymLeaderModalOpen && selectedGymLeaderInfo && (
-        <GymLeaderModal
-            gymInfo={selectedGymLeaderInfo}
-            isOpen={isGymLeaderModalOpen}
-            onClose={closeGymLeaderModal}
-            onPokemonClick={handleOpenPokemonModalFromTeam}
-            detailsCache={detailsCache}
-            currentLanguage={currentLanguage}
+          isCaptured={capturedPokemonIds.has(selectedPokemonForModal.id)}
         />
       )}
     </div>

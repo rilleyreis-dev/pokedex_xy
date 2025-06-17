@@ -51,7 +51,7 @@ const translationsData: AllTranslations = {
       "Mark as captured": "Marcar como capturado",
       "Unmark as captured": "Desmarcar como capturado",
 
-      // PokemonModal
+      // PokemonModal (some might be reused or become specific to PokemonDetailView)
       "Abilities": "Habilidades",
       "Base Stats": "Atributos Base",
       "Found on Routes": "Encontrado nas Rotas", 
@@ -84,13 +84,14 @@ const translationsData: AllTranslations = {
       "Filter by Type(s):": "Filtrar por Tipo(s):",
       "Filter by Pokémon type": "Filtrar por tipo de Pokémon",
       
-      // GymLeaderCard & GymLeaderModal
+      // GymLeaderCard & GymLeaderDetailView
       "Mark as defeated": "Marcar como derrotado",
       "Unmark as defeated": "Desmarcar como derrotado",
       "Battle Tips": "Dicas de Batalha",
       "Weak to:": "Fraco contra:",
       "Strong against:": "Forte contra:",
       "Pokémon Team": "Equipe Pokémon",
+      "Info": "Info", // For GymLeaderDetailView tab
 
       // App & LanguageSwitcher
       "Kalos Pokédex": "Pokédex de Kalos",
@@ -100,6 +101,9 @@ const translationsData: AllTranslations = {
       "Gym Leaders": "Líderes de Ginásio",
       "Loading Pokédex data...": "Carregando dados da Pokédex...",
       "Loading Gym Leader data...": "Carregando dados dos Líderes de Ginásio...",
+      "Loading Pokémon details...": "Carregando detalhes do Pokémon...",
+      "Loading details...": "Carregando detalhes...", // Generic loading for detail views
+      "Could not load details.": "Não foi possível carregar os detalhes.", // Generic error for detail views
       "No Pokémon found": "Nenhum Pokémon encontrado",
       "for": "para", 
       "on": "em", 
@@ -136,6 +140,7 @@ const translationsData: AllTranslations = {
       "during": "durante", 
       "Female": "Fêmea",
       "Male": "Macho",
+      "Genderless": "Sem Gênero",
       "during Overworld Rain": "durante Chuva no Mapa",
       "Turn 3DS Upside Down": "Virar o 3DS de Cabeça para Baixo",
       "Attack > Defense": "Ataque > Defesa",
@@ -178,7 +183,27 @@ const translationsData: AllTranslations = {
       "wulfric_name": "Wulfric",
       "snowbelle_city_name": "Snowbelle City",
       "iceberg_badge_name": "Insígnia do Iceberg",
-      "wulfric_tips": "Ataques do tipo Fogo ou Lutador derreterão a equipe de Wulfric."
+      "wulfric_tips": "Ataques do tipo Fogo ou Lutador derreterão a equipe de Wulfric.",
+
+      // PokemonDetailView
+      "Back to list": "Voltar para a lista",
+      "About": "Sobre",
+      // "Base Stats" already exists
+      // "Evolution" already exists
+      "Moves": "Golpes",
+      "Species": "Espécie",
+      // "Height" already exists
+      // "Weight" already exists
+      // "Abilities" already exists
+      "Breeding": "Criação",
+      "Gender": "Gênero",
+      "Egg Groups": "Grupos de Ovos",
+      "Egg Cycle": "Ciclo de Ovos",
+      "Moves information coming soon.": "Informações sobre golpes em breve.",
+      "N/A": "N/D",
+      "Could not load details for this Pokémon.": "Não foi possível carregar os detalhes para este Pokémon.",
+      "Go back": "Voltar",
+
     },
     pokemon_names: { 
         // "mr-mime": "Mr. Mime", 
@@ -255,13 +280,14 @@ const translationsData: AllTranslations = {
       "Filter by Type(s):": "Filter by Type(s):",
       "Filter by Pokémon type": "Filter by Pokémon type",
       
-      // GymLeaderCard & GymLeaderModal
+      // GymLeaderCard & GymLeaderDetailView
       "Mark as defeated": "Mark as defeated",
       "Unmark as defeated": "Unmark as defeated",
       "Battle Tips": "Battle Tips",
       "Weak to:": "Weak to:",
       "Strong against:": "Strong against:",
       "Pokémon Team": "Pokémon Team", 
+      "Info": "Info", // For GymLeaderDetailView tab
 
       // App & LanguageSwitcher
       "Kalos Pokédex": "Kalos Pokédex",
@@ -271,6 +297,9 @@ const translationsData: AllTranslations = {
       "Gym Leaders": "Gym Leaders",
       "Loading Pokédex data...": "Loading Pokédex data...",
       "Loading Gym Leader data...": "Loading Gym Leader data...",
+      "Loading Pokémon details...": "Loading Pokémon details...",
+      "Loading details...": "Loading details...", // Generic loading for detail views
+      "Could not load details.": "Could not load details.", // Generic error for detail views
       "No Pokémon found": "No Pokémon found",
       "for": "for", 
       "on": "on", 
@@ -307,6 +336,7 @@ const translationsData: AllTranslations = {
       "during": "during", 
       "Female": "Female",
       "Male": "Male",
+      "Genderless": "Genderless",
       "during Overworld Rain": "during Overworld Rain",
       "Turn 3DS Upside Down": "Turn 3DS Upside Down",
       "Attack > Defense": "Attack > Defense",
@@ -350,7 +380,26 @@ const translationsData: AllTranslations = {
       "wulfric_name": "Wulfric",
       "snowbelle_city_name": "Snowbelle City",
       "iceberg_badge_name": "Iceberg Badge",
-      "wulfric_tips": "Fire or Fighting-type attacks will melt Wulfric's team."
+      "wulfric_tips": "Fire or Fighting-type attacks will melt Wulfric's team.",
+      
+      // PokemonDetailView
+      "Back to list": "Back to list",
+      "About": "About",
+      // "Base Stats" already exists
+      // "Evolution" already exists
+      "Moves": "Moves",
+      "Species": "Species",
+      // "Height" already exists
+      // "Weight" already exists
+      // "Abilities" already exists
+      "Breeding": "Breeding",
+      "Gender": "Gender",
+      "Egg Groups": "Egg Groups",
+      "Egg Cycle": "Egg Cycle",
+      "Moves information coming soon.": "Moves information coming soon.",
+      "N/A": "N/A",
+      "Could not load details for this Pokémon.": "Could not load details for this Pokémon.",
+      "Go back": "Go back",
     },
      pokemon_names: {
         // "mr-mime": "Mr. Mime", 
@@ -380,6 +429,15 @@ export const getTranslatedPokemonName = (name: string, lang: SupportedLanguage):
   const translations = translationsData[lang].pokemon_names;
   if (translations && translations[name.toLowerCase()]) {
     return translations[name.toLowerCase()];
+  }
+  // For names with hyphens that are not special cases like "mr-mime", "ho-oh"
+  // e.g. "nidoran-m", "nidoran-f", "porygon-z"
+  if (name.includes('-') && !["mr-mime", "mime-jr", "ho-oh", "porygon-z", "porygon2", "jangmo-o", "hakamo-o", "kommo-o", "type-null", "tapu-koko", "tapu-lele", "tapu-bulu", "tapu-fini"].includes(name.toLowerCase())) {
+     const parts = name.split('-');
+     if (parts.length === 2 && (parts[1] === 'm' || parts[1] === 'f')) { // nidoran-m, nidoran-f
+        return `${baseCapitalize(parts[0])} ${parts[1].toUpperCase()}`;
+     }
+     return name.split('-').map(part => baseCapitalize(part)).join('-');
   }
   return baseCapitalize(name); 
 };

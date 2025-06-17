@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { BasePokemon, PokemonDetail, PokemonType as PokemonTypeInterface, SupportedLanguage, PokemonTypeColorStyle } from '../types';
 import { getPokemonDetailsById } from '../services/pokemonService';
@@ -8,7 +7,7 @@ import LoadingSpinner from './LoadingSpinner';
 
 interface PokemonCardProps {
   basePokemon: BasePokemon;
-  onCardClick: (details: PokemonDetail) => void;
+  onCardClick: (pokemonId: number) => void; 
   initialDetails?: PokemonDetail | null;
   isCaptured: boolean;
   onToggleCaptured: (pokemonId: number, event: React.MouseEvent) => void;
@@ -80,19 +79,14 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
     }
   }, [details, basePokemon.id, imageSrc]);
   
-  const primaryType = details?.types?.[0]?.type?.name?.toLowerCase();
-  const cardColorsConfig = primaryType ? POKEMON_TYPE_COLORS[primaryType] : POKEMON_TYPE_COLORS['normal'];
-  
-  const cardStyle: React.CSSProperties = cardColorsConfig.cardBackgroundHex 
-    ? { backgroundColor: cardColorsConfig.cardBackgroundHex }
-    : {};
-  const cardBgClassForDiv = cardColorsConfig.cardBackgroundHex ? '' : (cardColorsConfig.background || 'bg-slate-700 dark:bg-slate-800'); // Fallback if no specific hex for card
-  const cardNameTextColorClass = 'text-white';
+
+  const primaryTypeStyle = details ? (POKEMON_TYPE_COLORS[details.types[0].type.name.toLowerCase()] || POKEMON_TYPE_COLORS['normal']) : null;
+  const useSaturatedBackground = !!(primaryTypeStyle && primaryTypeStyle.saturatedColorHex);
 
 
   if (isLoading) {
     return (
-      <div className="relative bg-slate-100 dark:bg-slate-800 p-3 rounded-xl shadow-lg flex items-center justify-start h-24 sm:h-28">
+      <div className="relative bg-slate-100 dark:bg-slate-800 p-3 rounded-2xl shadow-lg flex items-center justify-start h-28 sm:h-32">
         <LoadingSpinner size="sm" color="text-sky-500 dark:text-sky-400" />
         <p className="ml-3 text-sm text-slate-500 dark:text-slate-400">{pokemonDisplayName}</p>
       </div>
@@ -101,7 +95,7 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
 
   if (error || !details) {
     return (
-      <div className="relative bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 p-3 rounded-xl shadow-lg flex flex-col items-center justify-center text-center h-24 sm:h-28">
+      <div className="relative bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 p-3 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center h-28 sm:h-32">
         <p className="font-semibold text-sm text-red-600 dark:text-red-400">{pokemonDisplayName}</p>
         <p className="text-xs text-red-500 dark:text-red-400">{error || t('Data unavailable', currentLanguage)}</p>
         {!initialDetails && (
@@ -118,51 +112,85 @@ const PokemonCard: React.FC<PokemonCardProps> = ({
   
   const cardAriaLabel = `${t('View details for', currentLanguage)} ${pokemonDisplayName}`;
 
+  const cardBgStyle = useSaturatedBackground && primaryTypeStyle?.saturatedColorHex 
+    ? { backgroundColor: primaryTypeStyle.saturatedColorHex } 
+    : {};
+
+  const cardClasses = `relative p-2.5 sm:p-3 rounded-2xl shadow-lg transform hover:-translate-y-0.5 transition-all duration-300 ease-in-out cursor-pointer flex flex-row items-center justify-between h-28 sm:h-32 ${
+    useSaturatedBackground 
+      ? 'hover:shadow-xl' 
+      : 'bg-[var(--page-bg-color)] hover:shadow-2xl hover:shadow-sky-500/40 dark:hover:shadow-sky-400/30'
+  }`;
+
+
   return (
     <div
-      style={cardStyle}
-      className={`relative p-2.5 sm:p-3 rounded-xl shadow-lg hover:shadow-2xl hover:shadow-sky-500/40 dark:hover:shadow-sky-400/30 transform hover:-translate-y-0.5 transition-all duration-300 ease-in-out cursor-pointer flex flex-row items-center justify-between ${cardBgClassForDiv} h-24 sm:h-28`}
-      onClick={() => onCardClick(details)}
+      className={cardClasses}
+      style={cardBgStyle}
+      onClick={() => onCardClick(details.id)} 
       role="button"
       tabIndex={0}
-      onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') onCardClick(details);}}
+      onKeyPress={(e) => { if (e.key === 'Enter' || e.key === ' ') onCardClick(details.id);}} 
       aria-label={cardAriaLabel}
     >
       <button
         onClick={(e) => onToggleCaptured(basePokemon.id, e)}
-        className={`absolute top-1.5 right-1.5 z-10 p-1 sm:p-1.5 rounded-full transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 
-          ${isCaptured ? 'bg-red-500 hover:bg-red-400 focus:ring-red-500' 
-                       : 'bg-slate-300/70 dark:bg-slate-600/70 hover:bg-slate-400/80 dark:hover:bg-slate-500/80 focus:ring-sky-500 opacity-60 hover:opacity-100'}`}
+        className={`absolute top-1.5 right-1.5 z-10 p-1 sm:p-1.5 rounded-full transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2
+          ${useSaturatedBackground
+            ? `bg-black/20 hover:bg-black/30 backdrop-blur-sm focus:ring-white/50 focus:ring-offset-transparent`
+            : `${isCaptured ? 'bg-red-500 hover:bg-red-400 focus:ring-red-500' 
+                           : 'bg-slate-300/70 dark:bg-slate-600/70 hover:bg-slate-400/80 dark:hover:bg-slate-500/80 focus:ring-sky-500 opacity-60 hover:opacity-100'} focus:ring-offset-[var(--page-bg-color)]`
+          }`
+        }
         aria-label={isCaptured ? `${t('Unmark as captured', currentLanguage)} ${pokemonDisplayName}` : `${t('Mark as captured', currentLanguage)} ${pokemonDisplayName}`}
         aria-pressed={isCaptured}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isCaptured ? 'text-white' : 'text-slate-100 dark:text-slate-300'}`} viewBox="0 0 20 20" fill="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className={`h-3.5 w-3.5 sm:h-4 sm:w-4 
+          ${useSaturatedBackground 
+            ? (isCaptured ? 'text-red-400' : 'text-white/70') 
+            : (isCaptured ? 'text-white' : 'text-slate-100 dark:text-slate-300')
+          }`} viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zM4 10a6 6 0 1112 0H4zm6-4a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-          {isCaptured && <circle cx="10" cy="10" r="3" fill="white" />}
+          {isCaptured && <circle cx="10" cy="10" r={useSaturatedBackground && isCaptured ? 2.5 : 3} fill="white" />}
         </svg>
       </button>
 
-      <div className="flex flex-col items-start justify-center flex-1 h-full mr-2 overflow-hidden">
+      <div className="flex flex-col items-start justify-center flex-1 h-full mr-2 overflow-hidden py-1">
         <h3 
-          className={`text-sm sm:text-base font-bold mb-1 ${cardNameTextColorClass} truncate w-full [text-shadow:1px_1px_2px_rgba(0,0,0,0.5)]`} 
+          className={`text-sm sm:text-base font-bold mb-1.5 truncate w-full
+            ${useSaturatedBackground 
+              ? 'text-white [text-shadow:1px_1px_2px_rgba(0,0,0,0.4)]' 
+              : 'text-slate-700 dark:text-slate-100'}`
+          } 
           title={pokemonDisplayName}
         >
           {pokemonDisplayName}
         </h3>
         <div className="flex flex-col space-y-1 items-start">
           {details.types.map((typeInfo: PokemonTypeInterface) => {
-             const typeColors: PokemonTypeColorStyle = POKEMON_TYPE_COLORS[typeInfo.type.name.toLowerCase()] || POKEMON_TYPE_COLORS['normal'];
-             const chipStyle = typeColors.backgroundHex ? { backgroundColor: typeColors.backgroundHex } : {};
-             const chipBgClass = typeColors.backgroundHex ? '' : typeColors.background; 
-            return (
-              <span
-                key={typeInfo.type.name}
-                style={chipStyle}
-                className={`px-1.5 py-0.5 text-[0.55rem] sm:text-[0.65rem] rounded-full font-medium ${chipBgClass} ${typeColors.text} backdrop-blur-sm shadow-sm`}
-              >
-                {getTranslatedType(typeInfo.type.name, currentLanguage)}
-              </span>
-            );
+            if (useSaturatedBackground) {
+              return (
+                <span
+                  key={typeInfo.type.name}
+                  className="px-2 py-0.5 text-[0.6rem] sm:text-xs rounded-full font-medium bg-white/20 text-white backdrop-blur-sm shadow-sm"
+                >
+                  {getTranslatedType(typeInfo.type.name, currentLanguage)}
+                </span>
+              );
+            } else {
+              const typeColors: PokemonTypeColorStyle = POKEMON_TYPE_COLORS[typeInfo.type.name.toLowerCase()] || POKEMON_TYPE_COLORS['normal'];
+              const chipStyle = typeColors.backgroundHex ? { backgroundColor: typeColors.backgroundHex } : {};
+              const chipBgClass = typeColors.backgroundHex ? '' : typeColors.background; 
+              return (
+                <span
+                  key={typeInfo.type.name}
+                  style={chipStyle}
+                  className={`px-2 py-0.5 text-[0.6rem] sm:text-xs rounded-full font-medium ${chipBgClass} ${typeColors.text} backdrop-blur-sm shadow-sm`}
+                >
+                  {getTranslatedType(typeInfo.type.name, currentLanguage)}
+                </span>
+              );
+            }
           })}
         </div>
       </div>
